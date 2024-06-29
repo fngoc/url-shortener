@@ -4,6 +4,7 @@ import (
 	"github.com/fngoc/url-shortener/internal/app"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 const host string = "http://localhost"
@@ -39,12 +40,16 @@ func getWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// читаем url
-	b := []byte(r.URL.String())
+	id := strings.TrimPrefix(r.URL.Path, "/")
+	// проверяем id
+	if id == "" {
+		w.WriteHeader(http.StatusBadRequest)
+	}
 	// получаем url из локальной памяти
-	url, ok := store[string(b[1:])]
+	url, ok := store[id]
 	// проверяем наличие url в локальной памяти
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	// редиректим на url
@@ -61,14 +66,19 @@ func postWebhook(w http.ResponseWriter, r *http.Request) {
 
 	// читаем все body
 	b, _ := ioutil.ReadAll(r.Body)
+
+	if len(b) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	// генерируем строку
-	str := app.GenerateString(8)
+	id := app.GenerateString(8)
 	// сохраняем в локальную память
-	store[str] = string(b)
+	store[id] = string(b)
 
 	// установим правильный заголовок для типа данных
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	// пока установим ответ-заглушку, без проверки ошибок
-	_, _ = w.Write([]byte(host + port + "/" + str))
+	_, _ = w.Write([]byte(host + port + "/" + id))
 }
