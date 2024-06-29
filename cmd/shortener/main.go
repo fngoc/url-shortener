@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/fngoc/url-shortener/internal/app"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -65,7 +65,7 @@ func postWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// читаем все body
-	b, _ := ioutil.ReadAll(r.Body)
+	b, _ := io.ReadAll(r.Body)
 
 	if len(b) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
