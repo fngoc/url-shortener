@@ -1,6 +1,8 @@
 package app
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 

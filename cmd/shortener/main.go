@@ -45,6 +45,7 @@ func getWebhook(w http.ResponseWriter, r *http.Request) {
 	// проверяем наличие url в локальной памяти
 	if !ok {
 		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 	// редиректим на url
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
@@ -61,7 +62,7 @@ func postWebhook(w http.ResponseWriter, r *http.Request) {
 	// читаем все body
 	b, _ := ioutil.ReadAll(r.Body)
 	// генерируем строку
-	str := app.GenerateString(10)
+	str := app.GenerateString(8)
 	// сохраняем в локальную память
 	store[str] = string(b)
 
