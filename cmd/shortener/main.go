@@ -33,8 +33,8 @@ func run() error {
 
 // функция getWebhook — обработчик GET HTTP-запроса
 func getWebhook(w http.ResponseWriter, r *http.Request) {
-	// разрешаем только GET-запросы с Content-Type: text/plain
-	if r.Method != http.MethodGet || !strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
+	// разрешаем только GET-запросы
+	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
