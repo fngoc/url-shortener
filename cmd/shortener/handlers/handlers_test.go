@@ -21,7 +21,7 @@ func TestGetWebhook(t *testing.T) {
 	tests := []struct {
 		name       string
 		method     string
-		requestUrl string
+		requestURL string
 		store      MockLocalStore
 		want       want
 	}{
@@ -77,11 +77,12 @@ func TestGetWebhook(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			storage.Store = storage.LocalStore(tt.store)
 
-			request := httptest.NewRequest(tt.method, tt.requestUrl, nil)
+			request := httptest.NewRequest(tt.method, tt.requestURL, nil)
 			w := httptest.NewRecorder()
 
 			GetWebhook(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 
 			require.Equal(t, tt.want.statusCode, res.StatusCode)
 
@@ -159,6 +160,7 @@ func TestPostWebhook(t *testing.T) {
 
 			PostWebhook(w, request)
 			res := w.Result()
+			defer res.Body.Close()
 
 			require.Equal(t, tt.want.statusCode, res.StatusCode)
 			require.Equal(t, tt.want.contentType, res.Header.Get("Content-Type"))
