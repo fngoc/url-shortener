@@ -2,6 +2,8 @@ package server
 
 import (
 	"github.com/fngoc/url-shortener/cmd/shortener/handlers"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 )
 
@@ -9,10 +11,14 @@ const port string = ":8080"
 
 // Run функция будет полезна при инициализации зависимостей сервера перед запуском
 func Run() error {
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
 
-	mux.HandleFunc("/", handlers.PostWebhook)
-	mux.HandleFunc("/{id}", handlers.GetWebhook)
+	r.Use(middleware.Logger)
 
-	return http.ListenAndServe(port, mux)
+	r.Route("/", func(r chi.Router) {
+		r.Post("/", handlers.PostWebhook)
+		r.Get("/{id}", handlers.GetWebhook)
+	})
+
+	return http.ListenAndServe(port, r)
 }
