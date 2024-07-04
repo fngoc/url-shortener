@@ -62,5 +62,5 @@ func PostWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	// пока установим ответ-заглушку, без проверки ошибок
-	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + id))
+	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
 }
