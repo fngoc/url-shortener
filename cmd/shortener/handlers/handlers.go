@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/app"
 	"io"
@@ -61,5 +62,5 @@ func PostWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	// пока установим ответ-заглушку, без проверки ошибок
-	_, _ = w.Write([]byte("http://localhost:8080/" + id))
+	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + id))
 }

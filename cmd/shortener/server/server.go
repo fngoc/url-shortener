@@ -1,13 +1,12 @@
 package server
 
 import (
+	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 )
-
-const port string = ":8080"
 
 // Run функция будет полезна при инициализации зависимостей сервера перед запуском
 func Run() error {
@@ -20,5 +19,5 @@ func Run() error {
 		r.Get("/{id}", handlers.GetWebhook)
 	})
 
-	return http.ListenAndServe(port, r)
+	return http.ListenAndServe(config.Flags.ServerAddress, r)
 }
