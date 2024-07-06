@@ -18,12 +18,12 @@ func ParseArgs() {
 	flag.Parse()
 
 	serverAddressEnv, findAddress := os.LookupEnv("SERVER_ADDRESS")
-	serverBaseUrlEnv, findBaseUrl := os.LookupEnv("BASE_URL")
+	serverBaseURLEnv, findBaseURL := os.LookupEnv("BASE_URL")
 
 	if findAddress {
 		Flags.ServerAddress = serverAddressEnv
 	}
-	if findBaseUrl {
-		Flags.BaseResultAddress = serverBaseUrlEnv
+	if findBaseURL {
+		Flags.BaseResultAddress = serverBaseURLEnv
 	}
 }
