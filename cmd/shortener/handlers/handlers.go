@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
-	"github.com/fngoc/url-shortener/internal/app"
+	"github.com/fngoc/url-shortener/internal/utils"
 	"io"
 	"net/http"
 	"strings"
@@ -50,7 +50,7 @@ func PostWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// генерируем строку
-	id := app.GenerateString(8)
+	id := utils.GenerateString(8)
 	// сохраняем в локальную память
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
