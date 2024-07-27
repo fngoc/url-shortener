@@ -19,8 +19,11 @@ func Run() error {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
-		r.Post("/", logger.RequestLogger(handlers.PostWebhook))
-		r.Get("/{id}", logger.RequestLogger(handlers.GetWebhook))
+		r.Post("/", logger.RequestLogger(handlers.PostSaveWebhook))
+		r.Get("/{id}", logger.RequestLogger(handlers.GetRedirectWebhook))
+		r.Route("/api", func(r chi.Router) {
+			r.Post("/shorten", logger.RequestLogger(handlers.PostShortenWebhook))
+		})
 	})
 
 	return http.ListenAndServe(config.Flags.ServerAddress, r)
