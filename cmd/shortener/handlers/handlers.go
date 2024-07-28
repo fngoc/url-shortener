@@ -34,7 +34,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost || (!strings.Contains(r.Header.Get("Content-Type"), "text/plain") &&
-		!strings.Contains(r.Header.Get("Content-Type"), "application/x-gzip")) {
+		!strings.Contains(r.Header.Get("Content-Type"), "gzip")) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -54,7 +54,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + id))
+	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
 }
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
@@ -80,7 +80,7 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 
 	buf := bytes.Buffer{}
 	encode := json.NewEncoder(&buf)
-	if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + id}); err != nil {
+	if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
