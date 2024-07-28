@@ -34,7 +34,9 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || (!strings.Contains(r.Header.Get("Content-Type"), "text/plain")) {
+	allowedTextPlan := !strings.Contains(r.Header.Get("Content-Type"), "text/plain")
+	gzipTextPlan := !strings.Contains(r.Header.Get("Content-Type"), "gzip")
+	if r.Method != http.MethodPost || !allowedTextPlan || !gzipTextPlan {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -59,7 +61,9 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
 func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+	allowedApplicationJson := strings.Contains(r.Header.Get("Content-Type"), "application/json")
+	gzipTextPlan := !strings.Contains(r.Header.Get("Content-Type"), "gzip")
+	if r.Method != http.MethodPost || !allowedApplicationJson || !gzipTextPlan {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
