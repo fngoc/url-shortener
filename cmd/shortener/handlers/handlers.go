@@ -33,7 +33,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -58,7 +58,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
 func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
