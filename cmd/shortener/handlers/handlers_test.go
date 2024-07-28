@@ -75,6 +75,9 @@ func TestGetRedirectWebhook(t *testing.T) {
 		},
 	}
 
+	if err := storage.InitializeLocalStore("data.json"); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			storage.Store = storage.LocalStore(tt.store)
@@ -154,6 +157,9 @@ func TestPostSaveWebhook(t *testing.T) {
 		},
 	}
 
+	if err := storage.InitializeLocalStore("data.json"); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.body))
@@ -233,6 +239,9 @@ func TestPostShortenWebhook(t *testing.T) {
 		},
 	}
 
+	if err := storage.InitializeLocalStore("data.json"); err != nil {
+		t.Fatal(err)
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			request := httptest.NewRequest(tt.method, "/api/shorten", strings.NewReader(tt.body))

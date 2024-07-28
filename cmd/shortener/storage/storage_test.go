@@ -41,6 +41,9 @@ func TestLocalStore_GetData(t *testing.T) {
 		},
 	}
 
+	if err := InitializeLocalStore("data.json"); err != nil {
+		t.Fatal(err)
+	}
 	mockLocalStore := make(LocalStore)
 	require.NoError(t, mockLocalStore.SaveData("key", "value"))
 	require.NoError(t, mockLocalStore.SaveData("vdsdhhmggdsadcxvvfsdsaf", "fdsbhgkjmdfsaew341gfds"))
@@ -95,6 +98,9 @@ func TestLocalStore_SaveData(t *testing.T) {
 		},
 	}
 
+	if err := InitializeLocalStore("data.json"); err != nil {
+		t.Fatal(err)
+	}
 	mockLocalStore := make(LocalStore)
 
 	for _, tt := range tests {
