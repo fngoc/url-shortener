@@ -94,14 +94,13 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 					r.Body = cr
 					defer cr.Close()
 				}
-			}
-
-			acceptEncoding := r.Header.Get("Accept-Encoding")
-			supportsGzip := strings.Contains(acceptEncoding, "gzip")
-			if supportsGzip {
-				cw := newCompressWriter(w)
-				ow = cw
-				defer cw.Close()
+				acceptEncoding := r.Header.Get("Accept-Encoding")
+				supportsGzip := strings.Contains(acceptEncoding, "gzip")
+				if supportsGzip {
+					cw := newCompressWriter(w)
+					ow = cw
+					defer cw.Close()
+				}
 			}
 
 		}
