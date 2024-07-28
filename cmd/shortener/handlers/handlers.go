@@ -33,7 +33,8 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
+	if r.Method != http.MethodPost || (!strings.Contains(r.Header.Get("Content-Type"), "text/plain") &&
+		!strings.Contains(r.Header.Get("Content-Type"), "application/x-gzip")) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
