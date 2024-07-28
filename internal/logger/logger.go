@@ -7,7 +7,6 @@ import (
 )
 
 type (
-	// берём структуру для хранения сведений об ответе
 	responseData struct {
 		status int
 		size   int
@@ -21,20 +20,17 @@ type (
 )
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
-	// записываем ответ, используя оригинальный http.ResponseWriter
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size // захватываем размер
 	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
-	// записываем код статуса, используя оригинальный http.ResponseWriter
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
 // Log будет доступен всему коду как синглтон.
-// Никакой код навыка, кроме функции InitLogger, не должен модифицировать эту переменную.
 // По умолчанию установлен no-op-логер, который не выводит никаких сообщений.
 var Log = zap.NewNop()
 
@@ -42,21 +38,16 @@ var loglevel = "INFO"
 
 // Initialize инициализирует синглтон логера с необходимым уровнем логирования.
 func Initialize() error {
-	// преобразуем текстовый уровень логирования в zap.AtomicLevel
 	lvl, err := zap.ParseAtomicLevel(loglevel)
 	if err != nil {
 		return err
 	}
-	// создаём новую конфигурацию логера
 	cfg := zap.NewProductionConfig()
-	// устанавливаем уровень
 	cfg.Level = lvl
-	// создаём логер на основе конфигурации
 	zl, err := cfg.Build()
 	if err != nil {
 		return err
 	}
-	// устанавливаем синглтон
 	Log = zl
 	return nil
 }
