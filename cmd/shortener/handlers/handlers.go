@@ -34,9 +34,10 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
-	allowedTextPlan := strings.Contains(r.Header.Get("Content-Type"), "text/plain")
-	gzipTextPlan := strings.Contains(r.Header.Get("Content-Type"), "gzip")
-	if r.Method != http.MethodPost || !allowedTextPlan || !gzipTextPlan {
+	contentType := r.Header.Get("Content-Type")
+	allowedTextPlan := strings.Contains(contentType, "text/plain")
+	gzipTextPlan := strings.Contains(contentType, "gzip")
+	if r.Method != http.MethodPost || (!allowedTextPlan && !gzipTextPlan) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -61,9 +62,10 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
 func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
-	allowedApplicationJson := strings.Contains(r.Header.Get("Content-Type"), "application/json")
-	gzipTextPlan := strings.Contains(r.Header.Get("Content-Type"), "gzip")
-	if r.Method != http.MethodPost || !allowedApplicationJson || !gzipTextPlan {
+	contentType := r.Header.Get("Content-Type")
+	allowedApplicationJson := strings.Contains(contentType, "application/json")
+	gzipTextPlan := strings.Contains(contentType, "gzip")
+	if r.Method != http.MethodPost || (!allowedApplicationJson && !gzipTextPlan) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
