@@ -22,6 +22,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/")
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	url, err := storage.Store.GetData(id)
 	if err != nil {
