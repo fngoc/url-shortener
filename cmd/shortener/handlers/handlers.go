@@ -64,10 +64,10 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 // PostShortenWebhook функция обработчик POST HTTP-запроса
 func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
-	allowedApplicationJson := strings.Contains(contentType, "application/json")
+	allowedApplicationJSON := strings.Contains(contentType, "application/json")
 	gzipTextPlan := strings.Contains(contentType, "gzip")
 
-	if r.Method != http.MethodPost || (!allowedApplicationJson && !gzipTextPlan) {
+	if r.Method != http.MethodPost || (!allowedApplicationJSON && !gzipTextPlan) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
