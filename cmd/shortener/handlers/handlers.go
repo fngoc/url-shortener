@@ -54,7 +54,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
+	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + id))
 }
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
@@ -80,7 +80,7 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 
 	buf := bytes.Buffer{}
 	encode := json.NewEncoder(&buf)
-	if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
+	if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + id}); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
