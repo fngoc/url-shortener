@@ -19,8 +19,8 @@ func Run() error {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
-		r.Post("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostSaveWebhook)))
-		r.Get("/{id}", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetRedirectWebhook)))
+		r.Post("/", logger.RequestLogger(handlers.PostSaveWebhook))
+		r.Get("/{id}", logger.RequestLogger(handlers.GetRedirectWebhook))
 		r.Route("/api", func(r chi.Router) {
 			r.Post("/shorten", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenWebhook)))
 		})
