@@ -1,66 +1,100 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
-	"github.com/fngoc/url-shortener/internal/app"
+	"github.com/fngoc/url-shortener/internal/models"
+	"github.com/fngoc/url-shortener/internal/utils"
 	"io"
 	"net/http"
 	"strings"
 )
 
-// GetWebhook функция обработчик GET HTTP-запроса
-func GetWebhook(w http.ResponseWriter, r *http.Request) {
-	// разрешаем только GET-запросы
+// GetRedirectWebhook функция обработчик GET HTTP-запроса
+func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// читаем url
 	id := strings.TrimPrefix(r.URL.Path, "/")
-	// проверяем id
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-	// получаем url из локальной памяти
 	url, err := storage.Store.GetData(id)
-	// проверяем наличие url в локальной памяти
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	// редиректим на url
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// PostWebhook функция обработчик POST HTTP-запроса
-func PostWebhook(w http.ResponseWriter, r *http.Request) {
-	// разрешаем только POST-запросы с Content-Type: text/plain
-	if r.Method != http.MethodPost || !strings.Contains(r.Header.Get("Content-Type"), "text/plain") {
+// PostSaveWebhook функция обработчик POST HTTP-запроса
+func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	allowedTextPlan := strings.Contains(contentType, "text/plain")
+	gzipTextPlan := strings.Contains(contentType, "gzip")
+
+	if r.Method != http.MethodPost || (!allowedTextPlan && !gzipTextPlan) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// читаем все body
 	b, _ := io.ReadAll(r.Body)
 
 	if len(b) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	// генерируем строку
-	id := app.GenerateString(8)
-	// сохраняем в локальную память
+	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	// установим правильный заголовок для типа данных
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	// пока установим ответ-заглушку, без проверки ошибок
 	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
+}
+
+// PostShortenWebhook функция обработчик POST HTTP-запроса
+func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	allowedApplicationJSON := strings.Contains(contentType, "application/json")
+	gzipTextPlan := strings.Contains(contentType, "gzip")
+
+	if r.Method != http.MethodPost || (!allowedApplicationJSON && !gzipTextPlan) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	dec := json.NewDecoder(r.Body)
+	var req models.Request
+	if err := dec.Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	id := utils.GenerateString(8)
+	err := storage.Store.SaveData(id, req.URL)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	buf := bytes.Buffer{}
+	encode := json.NewEncoder(&buf)
+	if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_, _ = w.Write(buf.Bytes())
 }

@@ -3,20 +3,27 @@ package server
 import (
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/handlers"
+	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 )
 
 // Run функция будет полезна при инициализации зависимостей сервера перед запуском
 func Run() error {
+	if err := logger.Initialize(); err != nil {
+		return err
+	}
+
+	logger.Log.Info("Starting server")
+
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-
 	r.Route("/", func(r chi.Router) {
-		r.Post("/", handlers.PostWebhook)
-		r.Get("/{id}", handlers.GetWebhook)
+		r.Post("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostSaveWebhook)))
+		r.Get("/{id}", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetRedirectWebhook)))
+		r.Route("/api", func(r chi.Router) {
+			r.Post("/shorten", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenWebhook)))
+		})
 	})
 
 	return http.ListenAndServe(config.Flags.ServerAddress, r)
