@@ -18,7 +18,7 @@ func ParseArgs() {
 	flag.StringVar(&Flags.ServerAddress, "a", "localhost:8080", "server address")
 	flag.StringVar(&Flags.BaseResultAddress, "b", "http://localhost:8080", "base result server address")
 	flag.StringVar(&Flags.FilePath, "f", "data.json", "file path")
-	flag.StringVar(&Flags.DBConf, "d", "host=localhost user=postgres password=postgres dbname=gpb_db sslmode=disable", "db params")
+	flag.StringVar(&Flags.DBConf, "d", "host=localhost user=postgres password=postgres dbname=test_db sslmode=disable", "db params")
 	flag.Parse()
 
 	serverAddressEnv, findAddress := os.LookupEnv("SERVER_ADDRESS")
