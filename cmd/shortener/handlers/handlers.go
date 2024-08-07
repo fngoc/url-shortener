@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
+	"github.com/fngoc/url-shortener/cmd/shortener/database"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
@@ -97,4 +98,21 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_, _ = w.Write(buf.Bytes())
+}
+
+// CheckConnection функция обработчик GET HTTP-запроса для проверки соединения с БД
+func CheckConnection(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err := database.PostgresInstant.Ping()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
 }
