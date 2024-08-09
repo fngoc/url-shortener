@@ -53,10 +53,7 @@ func CustomPing() bool {
 		return false
 	}
 	err := postgresInstant.db.Ping()
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func createTables(db *sql.DB) error {
