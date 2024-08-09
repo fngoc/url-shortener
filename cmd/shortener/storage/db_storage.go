@@ -30,11 +30,11 @@ func InitializeDB(dbConf string) error {
 
 func (dbs DBStore) GetData(key string) (string, error) {
 	row := dbs.db.QueryRow("SELECT original_url FROM url_shortener WHERE short_url = $1", key)
-	var originalUrl string
-	if err := row.Scan(&originalUrl); err != nil {
+	var originalURL string
+	if err := row.Scan(&originalURL); err != nil {
 		return "", err
 	}
-	return originalUrl, nil
+	return originalURL, nil
 }
 
 func (dbs DBStore) SaveData(key string, value string) error {
