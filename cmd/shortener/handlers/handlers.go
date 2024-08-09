@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/models"
@@ -52,6 +53,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -97,4 +99,20 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	_, _ = w.Write(buf.Bytes())
+}
+
+// CheckConnection функция обработчик GET HTTP-запроса для проверки соединения с БД
+func CheckConnection(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if !storage.CustomPing() {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
 }
