@@ -41,7 +41,7 @@ func TestLocalStore_GetData(t *testing.T) {
 		},
 	}
 
-	if err := InitializeLocalStore("data.json"); err != nil {
+	if err := InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	mockLocalStore := make(LocalStore)
@@ -98,7 +98,7 @@ func TestLocalStore_SaveData(t *testing.T) {
 		},
 	}
 
-	if err := InitializeLocalStore("data.json"); err != nil {
+	if err := InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	mockLocalStore := make(LocalStore)

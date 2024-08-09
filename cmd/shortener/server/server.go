@@ -10,10 +10,6 @@ import (
 
 // Run функция будет полезна при инициализации зависимостей сервера перед запуском
 func Run() error {
-	if err := logger.Initialize(); err != nil {
-		return err
-	}
-
 	logger.Log.Info("Starting server")
 
 	r := chi.NewRouter()

@@ -3,8 +3,8 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
-	"github.com/fngoc/url-shortener/cmd/shortener/database"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
@@ -53,6 +53,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -107,8 +108,7 @@ func CheckConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := database.PostgresInstant.Ping()
-	if err != nil {
+	if !storage.CustomPing() {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

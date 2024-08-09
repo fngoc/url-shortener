@@ -75,7 +75,7 @@ func TestGetRedirectWebhook(t *testing.T) {
 		},
 	}
 
-	if err := storage.InitializeLocalStore("data.json"); err != nil {
+	if err := storage.InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	for _, tt := range tests {
@@ -157,7 +157,7 @@ func TestPostSaveWebhook(t *testing.T) {
 		},
 	}
 
-	if err := storage.InitializeLocalStore("data.json"); err != nil {
+	if err := storage.InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	for _, tt := range tests {
@@ -239,7 +239,7 @@ func TestPostShortenWebhook(t *testing.T) {
 		},
 	}
 
-	if err := storage.InitializeLocalStore("data.json"); err != nil {
+	if err := storage.InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	for _, tt := range tests {
