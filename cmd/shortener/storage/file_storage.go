@@ -11,11 +11,11 @@ import (
 
 type FileStore map[string]string
 
-var fileStorage FileStore
-
-var currentUUID int
-
-var currentFilePath string
+var (
+	fileStorage     FileStore
+	currentUUID     int
+	currentFilePath string
+)
 
 func InitializeFileLocalStore(filename string) error {
 	logger.Log.Info("Initializing file store")

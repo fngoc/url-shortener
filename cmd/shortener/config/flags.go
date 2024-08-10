@@ -45,7 +45,7 @@ func ParseArgs() {
 	logger.Log.Info("Parse argument's is done")
 }
 
-func HasFlagAndEnvPostgresVariable() bool {
+func HasFlagOrEnvPostgresVariable() bool {
 	_, find := os.LookupEnv("DATABASE_DSN")
 	if Flags.DBConf != defaultPostgresParams || find {
 		return true
@@ -53,7 +53,7 @@ func HasFlagAndEnvPostgresVariable() bool {
 	return false
 }
 
-func HasFlagAndEnvFileVariable() bool {
+func HasFlagOrEnvFileVariable() bool {
 	_, find := os.LookupEnv("FILE_STORAGE_PATH")
 	if Flags.FilePath != defaultFileParams || find {
 		return true

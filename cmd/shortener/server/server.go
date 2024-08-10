@@ -20,6 +20,7 @@ func Run() error {
 		r.Get("/ping", logger.RequestLogger(handlers.GzipMiddleware(handlers.CheckConnection)))
 		r.Route("/api", func(r chi.Router) {
 			r.Post("/shorten", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenWebhook)))
+			r.Post("/shorten/batch", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenBatchWebhook)))
 		})
 	})
 

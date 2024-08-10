@@ -15,11 +15,11 @@ func main() {
 
 	config.ParseArgs()
 
-	if config.HasFlagAndEnvPostgresVariable() {
+	if config.HasFlagOrEnvPostgresVariable() {
 		if err := storage.InitializeDB(config.Flags.DBConf); err != nil {
 			panic(err)
 		}
-	} else if config.HasFlagAndEnvFileVariable() {
+	} else if config.HasFlagOrEnvFileVariable() {
 		if err := storage.InitializeFileLocalStore(config.Flags.FilePath); err != nil {
 			panic(err)
 		}

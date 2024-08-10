@@ -101,6 +101,51 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
+// PostShortenBatchWebhook функция обработчик POST HTTP-запроса для сохранения данных бачами
+func PostShortenBatchWebhook(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	allowedApplicationJSON := strings.Contains(contentType, "application/json")
+	gzipTextPlan := strings.Contains(contentType, "gzip")
+
+	if r.Method != http.MethodPost || (!allowedApplicationJSON && !gzipTextPlan) {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	dec := json.NewDecoder(r.Body)
+	var req []models.RequestBatch
+	if err := dec.Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var resp = make([]models.ResponseBatch, 0)
+	for _, v := range req {
+		id := utils.GenerateString(8)
+		err := storage.Store.SaveData(id, v.OriginalURL)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		resp = append(resp, models.ResponseBatch{
+			CorrelationID: v.CorrelationID,
+			ShortURL:      config.Flags.BaseResultAddress + "/" + id,
+		})
+	}
+
+	buf := bytes.Buffer{}
+	encode := json.NewEncoder(&buf)
+	if err := encode.Encode(resp); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	_, _ = w.Write(buf.Bytes())
+}
+
 // CheckConnection функция обработчик GET HTTP-запроса для проверки соединения с БД
 func CheckConnection(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
