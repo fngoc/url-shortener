@@ -58,16 +58,9 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
 			id = dbErr.ShortURL
 
-			buf := bytes.Buffer{}
-			encode := json.NewEncoder(&buf)
-			if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusConflict)
-			_, _ = w.Write(buf.Bytes())
+			_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
 			return
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
