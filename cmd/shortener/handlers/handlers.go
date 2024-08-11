@@ -86,8 +86,19 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var dbErr *storage.DBError
 		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
-			w.WriteHeader(http.StatusConflict)
 			id = dbErr.ShortURL
+
+			buf := bytes.Buffer{}
+			encode := json.NewEncoder(&buf)
+			if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			_, _ = w.Write(buf.Bytes())
+			return
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
 			return
