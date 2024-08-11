@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fngoc/url-shortener/internal/logger"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
@@ -55,7 +56,7 @@ func (dbs DBStore) SaveData(id string, value string) error {
 	_, err := dbs.db.Exec("INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
+		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 			id, _ = postgresInstant.getShortURLByOriginalURL(value)
 			return &DBError{
 				ShortURL: id,
