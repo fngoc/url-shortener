@@ -2,13 +2,24 @@ package storage
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/fngoc/url-shortener/internal/logger"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type DBStore struct {
 	db *sql.DB
+}
+
+type DBError struct {
+	ShortURL string
+	Err      *pgconn.PgError
+}
+
+func (p *DBError) Error() string {
+	return p.Err.Message
 }
 
 var postgresInstant DBStore
@@ -37,13 +48,22 @@ func (dbs DBStore) GetData(key string) (string, error) {
 	return originalURL, nil
 }
 
-func (dbs DBStore) SaveData(key string, value string) error {
-	if key == "" || value == "" {
+func (dbs DBStore) SaveData(id string, value string) error {
+	if id == "" || value == "" {
 		return fmt.Errorf("key or value is empty")
 	}
-	_, err := dbs.db.Exec("INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", key, value)
+	_, err := dbs.db.Exec("INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
 	if err != nil {
-		return err
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			id, _ = postgresInstant.getShortURLByOriginalURL(value)
+			return &DBError{
+				ShortURL: id,
+				Err:      pgErr,
+			}
+		} else {
+			return err
+		}
 	}
 	return nil
 }
@@ -61,7 +81,7 @@ func createTables(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS url_shortener (
 		uuid SERIAL PRIMARY KEY,
 		short_url VARCHAR NOT NULL UNIQUE,
-		original_url VARCHAR NOT NULL,
+		original_url VARCHAR NOT NULL UNIQUE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
@@ -71,4 +91,13 @@ func createTables(db *sql.DB) error {
 	}
 	logger.Log.Info("Database table created")
 	return nil
+}
+
+func (dbs DBStore) getShortURLByOriginalURL(originalURL string) (string, error) {
+	row := dbs.db.QueryRow("SELECT short_url FROM url_shortener WHERE original_url = $1", originalURL)
+	var original string
+	if err := row.Scan(&original); err != nil {
+		return "", err
+	}
+	return original, nil
 }

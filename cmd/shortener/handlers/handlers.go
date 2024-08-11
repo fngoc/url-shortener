@@ -3,11 +3,12 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
+	"github.com/jackc/pgerrcode"
 	"io"
 	"net/http"
 	"strings"
@@ -53,7 +54,6 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -84,8 +84,14 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, req.URL)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		var dbErr *storage.DBError
+		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
+			w.WriteHeader(http.StatusConflict)
+			id = dbErr.ShortURL
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	buf := bytes.Buffer{}
