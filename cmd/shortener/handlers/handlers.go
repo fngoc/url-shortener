@@ -54,8 +54,25 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	id := utils.GenerateString(8)
 	err := storage.Store.SaveData(id, string(b))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		var dbErr *storage.DBError
+		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
+			id = dbErr.ShortURL
+
+			buf := bytes.Buffer{}
+			encode := json.NewEncoder(&buf)
+			if err := encode.Encode(models.Response{Result: config.Flags.BaseResultAddress + "/" + id}); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusConflict)
+			_, _ = w.Write(buf.Bytes())
+			return
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
@@ -67,10 +84,9 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	allowedApplicationJSON := strings.Contains(contentType, "application/json")
-	allowedTextPlan := strings.Contains(contentType, "text/plan")
 	gzipTextPlan := strings.Contains(contentType, "gzip")
 
-	if r.Method != http.MethodPost || (!allowedTextPlan && !allowedApplicationJSON && !gzipTextPlan) {
+	if r.Method != http.MethodPost || (!allowedApplicationJSON && !gzipTextPlan) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
