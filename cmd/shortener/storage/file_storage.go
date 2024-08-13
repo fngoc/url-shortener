@@ -54,14 +54,14 @@ func InitializeFileLocalStore(filename string) error {
 	return nil
 }
 
-func (fs FileStore) GetData(ctx context.Context, key string) (string, error) {
+func (fs FileStore) GetData(_ context.Context, key string) (string, error) {
 	if val, ok := fs[key]; ok {
 		return val, nil
 	}
 	return "", fmt.Errorf("data by key: %s, not found", key)
 }
 
-func (fs FileStore) SaveData(ctx context.Context, key string, value string) error {
+func (fs FileStore) SaveData(_ context.Context, key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("key or value is empty")
 	}
