@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"github.com/fngoc/url-shortener/internal/logger"
 )
@@ -16,14 +17,14 @@ func InitializeInMemoryLocalStore() error {
 	return nil
 }
 
-func (lc LocalStore) GetData(key string) (string, error) {
+func (lc LocalStore) GetData(ctx context.Context, key string) (string, error) {
 	if val, ok := lc[key]; ok {
 		return val, nil
 	}
 	return "", fmt.Errorf("data by key: %s, not found", key)
 }
 
-func (lc LocalStore) SaveData(key string, value string) error {
+func (lc LocalStore) SaveData(ctx context.Context, key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("key or value is empty")
 	}

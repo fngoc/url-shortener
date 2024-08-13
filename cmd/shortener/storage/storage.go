@@ -1,8 +1,10 @@
 package storage
 
+import "context"
+
 type Repository interface {
-	GetData(string) (string, error)
-	SaveData(string, string) error
+	GetData(context.Context, string) (string, error)
+	SaveData(context.Context, string, string) error
 }
 
 var Store Repository

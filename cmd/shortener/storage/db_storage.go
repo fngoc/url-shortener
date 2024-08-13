@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"time"
 )
 
 type DBStore struct {
@@ -40,8 +42,11 @@ func InitializeDB(dbConf string) error {
 	return nil
 }
 
-func (dbs DBStore) GetData(key string) (string, error) {
-	row := dbs.db.QueryRow("SELECT original_url FROM url_shortener WHERE short_url = $1", key)
+func (dbs DBStore) GetData(ctx context.Context, key string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	row := dbs.db.QueryRowContext(ctx, "SELECT original_url FROM url_shortener WHERE short_url = $1", key)
 	var originalURL string
 	if err := row.Scan(&originalURL); err != nil {
 		return "", err
@@ -49,15 +54,19 @@ func (dbs DBStore) GetData(key string) (string, error) {
 	return originalURL, nil
 }
 
-func (dbs DBStore) SaveData(id string, value string) error {
+func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error {
 	if id == "" || value == "" {
 		return fmt.Errorf("key or value is empty")
 	}
-	_, err := dbs.db.Exec("INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
 	if err != nil {
 		var pgErr *pgconn.PgError
+
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			id, repeatingError := postgresInstant.getShortURLByOriginalURL(value)
+			id, repeatingError := postgresInstant.getShortURLByOriginalURL(ctx, value)
 			if repeatingError != nil {
 				return repeatingError
 			}
@@ -89,7 +98,10 @@ func createTables(db *sql.DB) error {
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
-	_, err := db.Exec(createTableQuery)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(ctx, createTableQuery)
 	if err != nil {
 		return err
 	}
@@ -97,8 +109,11 @@ func createTables(db *sql.DB) error {
 	return nil
 }
 
-func (dbs DBStore) getShortURLByOriginalURL(originalURL string) (string, error) {
-	row := dbs.db.QueryRow("SELECT short_url FROM url_shortener WHERE original_url = $1", originalURL)
+func (dbs DBStore) getShortURLByOriginalURL(ctx context.Context, originalURL string) (string, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	row := dbs.db.QueryRowContext(dbCtx, "SELECT short_url FROM url_shortener WHERE original_url = $1", originalURL)
 	var original string
 	if err := row.Scan(&original); err != nil {
 		return "", err

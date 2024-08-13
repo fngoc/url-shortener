@@ -26,7 +26,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	url, err := storage.Store.GetData(id)
+	url, err := storage.Store.GetData(r.Context(), id)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -52,7 +52,7 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := utils.GenerateString(8)
-	err := storage.Store.SaveData(id, string(b))
+	err := storage.Store.SaveData(r.Context(), id, string(b))
 	if err != nil {
 		var dbErr *storage.DBError
 		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
@@ -92,7 +92,7 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := utils.GenerateString(8)
-	err := storage.Store.SaveData(id, req.URL)
+	err := storage.Store.SaveData(r.Context(), id, req.URL)
 	if err != nil {
 		var dbErr *storage.DBError
 		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
@@ -149,7 +149,7 @@ func PostShortenBatchWebhook(w http.ResponseWriter, r *http.Request) {
 	var resp = make([]models.ResponseBatch, 0, len(req))
 	for _, v := range req {
 		id := utils.GenerateString(8)
-		err := storage.Store.SaveData(id, v.OriginalURL)
+		err := storage.Store.SaveData(r.Context(), id, v.OriginalURL)
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
