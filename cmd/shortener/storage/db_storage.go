@@ -57,7 +57,10 @@ func (dbs DBStore) SaveData(id string, value string) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			id, _ = postgresInstant.getShortURLByOriginalURL(value)
+			id, repeatingError := postgresInstant.getShortURLByOriginalURL(value)
+			if repeatingError != nil {
+				return repeatingError
+			}
 			return &DBError{
 				ShortURL: id,
 				Err:      pgErr,

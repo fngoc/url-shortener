@@ -17,18 +17,18 @@ func main() {
 
 	if config.HasFlagOrEnvPostgresVariable() {
 		if err := storage.InitializeDB(config.Flags.DBConf); err != nil {
-			panic(err)
+			logger.Log.Fatal(err.Error())
 		}
 	} else if config.HasFlagOrEnvFileVariable() {
 		if err := storage.InitializeFileLocalStore(config.Flags.FilePath); err != nil {
-			panic(err)
+			logger.Log.Fatal(err.Error())
 		}
 	} else {
 		if err := storage.InitializeInMemoryLocalStore(); err != nil {
-			panic(err)
+			logger.Log.Fatal(err.Error())
 		}
 	}
 	if err := server.Run(); err != nil {
-		panic(err)
+		logger.Log.Fatal(err.Error())
 	}
 }

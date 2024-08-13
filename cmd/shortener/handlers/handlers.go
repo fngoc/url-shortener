@@ -56,21 +56,21 @@ func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var dbErr *storage.DBError
 		if errors.As(err, &dbErr) && pgerrcode.IsIntegrityConstraintViolation(dbErr.Err.Code) {
-			setResponsePostSaveWebhook(&w, http.StatusConflict, dbErr.ShortURL)
+			setResponsePostSaveWebhook(w, http.StatusConflict, dbErr.ShortURL)
 			return
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-	setResponsePostSaveWebhook(&w, http.StatusCreated, id)
+	setResponsePostSaveWebhook(w, http.StatusCreated, id)
 }
 
 // setResponsePostSaveWebhook устанавливает ответ для PostSaveWebhook
-func setResponsePostSaveWebhook(w *http.ResponseWriter, statusCode int, id string) {
-	(*w).Header().Set("Content-Type", "text/plain")
-	(*w).WriteHeader(statusCode)
-	_, _ = (*w).Write([]byte(config.Flags.BaseResultAddress + "/" + id))
+func setResponsePostSaveWebhook(w http.ResponseWriter, statusCode int, id string) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(statusCode)
+	_, _ = w.Write([]byte(config.Flags.BaseResultAddress + "/" + id))
 }
 
 // PostShortenWebhook функция обработчик POST HTTP-запроса
@@ -104,7 +104,7 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
-			setResponsePostShortenWebhook(&w, http.StatusConflict, buf)
+			setResponsePostShortenWebhook(w, http.StatusConflict, buf)
 			return
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
@@ -118,14 +118,14 @@ func PostShortenWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	setResponsePostShortenWebhook(&w, http.StatusCreated, buf)
+	setResponsePostShortenWebhook(w, http.StatusCreated, buf)
 }
 
 // setResponsePostShortenWebhook устанавливает ответ для PostShortenWebhook
-func setResponsePostShortenWebhook(w *http.ResponseWriter, statusCode int, buf bytes.Buffer) {
-	(*w).Header().Set("Content-Type", "application/json")
-	(*w).WriteHeader(statusCode)
-	_, _ = (*w).Write(buf.Bytes())
+func setResponsePostShortenWebhook(w http.ResponseWriter, statusCode int, buf bytes.Buffer) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	_, _ = w.Write(buf.Bytes())
 }
 
 // PostShortenBatchWebhook функция обработчик POST HTTP-запроса для сохранения данных бачами
@@ -146,7 +146,7 @@ func PostShortenBatchWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp = make([]models.ResponseBatch, 0)
+	var resp = make([]models.ResponseBatch, len(req))
 	for _, v := range req {
 		id := utils.GenerateString(8)
 		err := storage.Store.SaveData(id, v.OriginalURL)
