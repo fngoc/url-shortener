@@ -146,7 +146,7 @@ func PostShortenBatchWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var resp = make([]models.ResponseBatch, 0)
+	var resp = make([]models.ResponseBatch, 0, len(req))
 	for _, v := range req {
 		id := utils.GenerateString(8)
 		err := storage.Store.SaveData(id, v.OriginalURL)
