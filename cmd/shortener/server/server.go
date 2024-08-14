@@ -10,10 +10,6 @@ import (
 
 // Run функция будет полезна при инициализации зависимостей сервера перед запуском
 func Run() error {
-	if err := logger.Initialize(); err != nil {
-		return err
-	}
-
 	logger.Log.Info("Starting server")
 
 	r := chi.NewRouter()
@@ -21,8 +17,10 @@ func Run() error {
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostSaveWebhook)))
 		r.Get("/{id}", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetRedirectWebhook)))
+		r.Get("/ping", logger.RequestLogger(handlers.GzipMiddleware(handlers.CheckConnection)))
 		r.Route("/api", func(r chi.Router) {
 			r.Post("/shorten", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenWebhook)))
+			r.Post("/shorten/batch", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenBatchWebhook)))
 		})
 	})
 

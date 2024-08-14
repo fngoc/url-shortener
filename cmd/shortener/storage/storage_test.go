@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -41,16 +42,16 @@ func TestLocalStore_GetData(t *testing.T) {
 		},
 	}
 
-	if err := InitializeLocalStore("data.json"); err != nil {
+	if err := InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	mockLocalStore := make(LocalStore)
-	require.NoError(t, mockLocalStore.SaveData("key", "value"))
-	require.NoError(t, mockLocalStore.SaveData("vdsdhhmggdsadcxvvfsdsaf", "fdsbhgkjmdfsaew341gfds"))
+	require.NoError(t, mockLocalStore.SaveData(context.TODO(), "key", "value"))
+	require.NoError(t, mockLocalStore.SaveData(context.TODO(), "vdsdhhmggdsadcxvvfsdsaf", "fdsbhgkjmdfsaew341gfds"))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			value, err := mockLocalStore.GetData(tt.input)
+			value, err := mockLocalStore.GetData(context.TODO(), tt.input)
 			if tt.want.isError {
 				require.Error(t, err)
 			}
@@ -98,19 +99,19 @@ func TestLocalStore_SaveData(t *testing.T) {
 		},
 	}
 
-	if err := InitializeLocalStore("data.json"); err != nil {
+	if err := InitializeFileLocalStore("data.json"); err != nil {
 		t.Fatal(err)
 	}
 	mockLocalStore := make(LocalStore)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := mockLocalStore.SaveData(tt.inputKey, tt.inputValue)
+			err := mockLocalStore.SaveData(context.TODO(), tt.inputKey, tt.inputValue)
 			if tt.isError {
 				require.Error(t, err)
 				return
 			}
-			value, err := mockLocalStore.GetData(tt.inputKey)
+			value, err := mockLocalStore.GetData(context.TODO(), tt.inputKey)
 			if err != nil {
 				t.Fatal(err)
 			}
