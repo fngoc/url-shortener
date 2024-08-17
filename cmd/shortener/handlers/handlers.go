@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
-	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
@@ -39,14 +38,6 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	authHeader := r.Header.Get("Authorization")
-	logger.Log.Info("auth: " + authHeader)
-	if authHeader == "" || GetUserID(authHeader) == -1 {
-		logger.Log.Warn("Token is not valid")
-		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
