@@ -64,7 +64,7 @@ func GetUserID(tokenString string) int {
 // AuthMiddleware — middleware для аунтификации HTTP-запросов.
 func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("token")
+		_, err := r.Cookie("token")
 
 		if errors.Is(err, http.ErrNoCookie) {
 			token, err := BuildJWTString()
@@ -72,7 +72,6 @@ func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-
 			http.SetCookie(w, &http.Cookie{
 				Name:     "token",
 				Value:    token,
@@ -81,17 +80,8 @@ func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
-			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s", token))
-		} else {
-			userID := GetUserID(cookie.Value)
-			if userID == -1 {
-				w.WriteHeader(http.StatusUnauthorized)
-				logger.Log.Info("Token is not valid")
-				return
-			}
-			logger.Log.Info(fmt.Sprintf("Auth success with UserId: %d", userID))
+			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
-
 		h.ServeHTTP(w, r)
 	}
 }

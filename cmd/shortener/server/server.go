@@ -26,7 +26,7 @@ func Run() error {
 			})
 
 			r.Route("/user", func(r chi.Router) {
-				r.Get("/urls", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.GetUrlsWebhook))))
+				r.Get("/urls", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetUrlsWebhook)))
 			})
 		})
 	})
