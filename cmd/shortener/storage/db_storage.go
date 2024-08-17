@@ -48,7 +48,7 @@ func (dbs DBStore) GetData(ctx context.Context, key string) (string, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url FROM url_shortener WHERE short_url = $1", key)
+	row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url FROM url_shortener2 WHERE short_url = $1", key)
 	var originalURL string
 	if err := row.Scan(&originalURL); err != nil {
 		return "", err
@@ -62,7 +62,7 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 
 	result := make([]models.ResponseDto, 0)
 
-	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener")
+	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener2")
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error 
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
+	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener2(short_url, original_url) VALUES ($1, $2)", id, value)
 	if err != nil {
 		var pgErr *pgconn.PgError
 
@@ -124,7 +124,7 @@ func CustomPing() bool {
 
 func createTables(db *sql.DB) error {
 	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS url_shortener (
+	CREATE TABLE IF NOT EXISTS url_shortener2 (
 		uuid SERIAL PRIMARY KEY,
 		short_url VARCHAR NOT NULL UNIQUE,
 		original_url VARCHAR NOT NULL UNIQUE,
@@ -146,7 +146,7 @@ func (dbs DBStore) getShortURLByOriginalURL(ctx context.Context, originalURL str
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	row := dbs.db.QueryRowContext(dbCtx, "SELECT short_url FROM url_shortener WHERE original_url = $1", originalURL)
+	row := dbs.db.QueryRowContext(dbCtx, "SELECT short_url FROM url_shortener2 WHERE original_url = $1", originalURL)
 	var original string
 	if err := row.Scan(&original); err != nil {
 		return "", err
