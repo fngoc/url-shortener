@@ -66,6 +66,9 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 	if err != nil {
 		return nil, err
 	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
 
 	for rows.Next() {
 		var shortURL string

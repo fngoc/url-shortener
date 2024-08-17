@@ -83,13 +83,13 @@ func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			})
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s", token))
 		} else {
-			userId := GetUserID(cookie.Value)
-			if userId == -1 {
+			userID := GetUserID(cookie.Value)
+			if userID == -1 {
 				w.WriteHeader(http.StatusUnauthorized)
-				logger.Log.Info(fmt.Sprintf("Token is not valid"))
+				logger.Log.Info("Token is not valid")
 				return
 			}
-			logger.Log.Info(fmt.Sprintf("Auth success with UserId: %d", userId))
+			logger.Log.Info(fmt.Sprintf("Auth success with UserId: %d", userID))
 		}
 
 		h.ServeHTTP(w, r)
