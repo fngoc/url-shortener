@@ -34,6 +34,35 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+// GetUrlsWebhook функция обработчик GET HTTP-запроса для получения всех urls
+func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	urls, err := storage.Store.GetAllData(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	buf := bytes.Buffer{}
+	encode := json.NewEncoder(&buf)
+	if err := encode.Encode(urls); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+}
+
 // PostSaveWebhook функция обработчик POST HTTP-запроса
 func PostSaveWebhook(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")

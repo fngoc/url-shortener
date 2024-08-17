@@ -19,6 +19,11 @@ type (
 		ShortURL      string `json:"short_url"`
 	}
 
+	ResponseDto struct {
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
+	}
+
 	URLData struct {
 		UUID        int    `json:"uuid"`
 		ShortURL    string `json:"short_url"`

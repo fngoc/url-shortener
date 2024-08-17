@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/internal/logger"
+	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -43,15 +45,43 @@ func InitializeDB(dbConf string) error {
 }
 
 func (dbs DBStore) GetData(ctx context.Context, key string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	row := dbs.db.QueryRowContext(ctx, "SELECT original_url FROM url_shortener WHERE short_url = $1", key)
+	row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url FROM url_shortener WHERE short_url = $1", key)
 	var originalURL string
 	if err := row.Scan(&originalURL); err != nil {
 		return "", err
 	}
 	return originalURL, nil
+}
+
+func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error) {
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	result := make([]models.ResponseDto, 0)
+
+	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener")
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var shortURL string
+		var originalURL string
+
+		err := rows.Scan(&shortURL, &originalURL)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, models.ResponseDto{
+			ShortURL:    config.Flags.BaseResultAddress + "/" + shortURL,
+			OriginalURL: originalURL,
+		})
+	}
+	return result, nil
 }
 
 func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error {
