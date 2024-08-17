@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/logger"
@@ -67,8 +66,6 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	logger.Log.Info(fmt.Sprintf("len: %d", len(urls)))
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
