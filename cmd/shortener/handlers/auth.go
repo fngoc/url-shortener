@@ -80,6 +80,7 @@ func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
+			w.Header().Set("Authorization", "Bearer "+token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
 		h.ServeHTTP(w, r)
