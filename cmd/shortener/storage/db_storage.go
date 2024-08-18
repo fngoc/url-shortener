@@ -128,7 +128,7 @@ func createTables(db *sql.DB) error {
 		uuid SERIAL PRIMARY KEY,
 		short_url VARCHAR NOT NULL UNIQUE,
 		original_url VARCHAR NOT NULL UNIQUE,
-		user_id VARCHAR NOT NULL UNIQUE,
+		user_id VARCHAR NOT NULL,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
