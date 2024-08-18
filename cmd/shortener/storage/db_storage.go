@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/jackc/pgerrcode"
@@ -69,13 +70,17 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 
 	var result []models.ResponseDto
 	for rows.Next() {
-		item := models.ResponseDto{}
+		var shortURL string
+		var originalURL string
 
-		if err := rows.Scan(&item.ShortURL, &item.OriginalURL); err != nil {
+		if err := rows.Scan(&shortURL, &originalURL); err != nil {
 			return nil, err
 		}
 
-		result = append(result, item)
+		result = append(result, models.ResponseDto{
+			ShortURL:    config.Flags.BaseResultAddress + "/" + shortURL,
+			OriginalURL: originalURL,
+		})
 	}
 	return result, nil
 }
