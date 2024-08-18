@@ -18,6 +18,11 @@ type Claims struct {
 	UserID int
 }
 
+// Ключ для контекста
+type contextKey string
+
+const userIdKey contextKey = "userID"
+
 const TokenExp = time.Hour * 3
 const SecretKey = "supersecretkey"
 
@@ -82,7 +87,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
-			authCtx = context.WithValue(r.Context(), "userID", GetUserID(token))
+			authCtx = context.WithValue(r.Context(), userIdKey, GetUserID(token))
 			w.Header().Set("Authorization", token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}

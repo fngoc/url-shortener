@@ -51,7 +51,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authCtx := context.WithValue(r.Context(), "userID", GetUserID(authHeader))
+	authCtx := context.WithValue(r.Context(), userIdKey, GetUserID(authHeader))
 
 	urls, err := storage.Store.GetAllData(authCtx)
 	if err != nil {
