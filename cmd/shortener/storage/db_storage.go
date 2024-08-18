@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
+	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/jackc/pgerrcode"
@@ -93,8 +94,8 @@ func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error 
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	userId := ctx.Value("userID").(int)
-	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url, user_id) VALUES ($1, $2, $3)", id, value, userId)
+	userID := ctx.Value(constants.UserIDKey).(int)
+	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url, user_id) VALUES ($1, $2, $3)", id, value, userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 

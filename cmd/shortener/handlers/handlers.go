@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
+	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
@@ -51,7 +52,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authCtx := context.WithValue(r.Context(), userIdKey, GetUserID(authHeader))
+	authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
 
 	urls, err := storage.Store.GetAllData(authCtx)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
@@ -17,11 +18,6 @@ type Claims struct {
 	jwt.RegisteredClaims
 	UserID int
 }
-
-// Ключ для контекста
-type contextKey string
-
-const userIdKey contextKey = "userID"
 
 const TokenExp = time.Hour * 3
 const SecretKey = "supersecretkey"
@@ -87,7 +83,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
-			authCtx = context.WithValue(r.Context(), userIdKey, GetUserID(token))
+			authCtx = context.WithValue(r.Context(), constants.UserIDKey, GetUserID(token))
 			w.Header().Set("Authorization", token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
