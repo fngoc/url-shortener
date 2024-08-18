@@ -60,7 +60,8 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener")
+	userID := ctx.Value("userID").(string)
+	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener WHERE user_id = $1", userID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,8 @@ func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error 
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url) VALUES ($1, $2)", id, value)
+	userId := ctx.Value("userID").(string)
+	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url, user_id) VALUES ($1, $2, $3)", id, value, userId)
 	if err != nil {
 		var pgErr *pgconn.PgError
 
@@ -126,6 +128,7 @@ func createTables(db *sql.DB) error {
 		uuid SERIAL PRIMARY KEY,
 		short_url VARCHAR NOT NULL UNIQUE,
 		original_url VARCHAR NOT NULL UNIQUE,
+		user_id VARCHAR NOT NULL UNIQUE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 

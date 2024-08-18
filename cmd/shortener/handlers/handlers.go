@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -50,7 +52,9 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urls, err := storage.Store.GetAllData(r.Context())
+	authCtx := context.WithValue(r.Context(), "userID", strconv.Itoa(GetUserID(authHeader)))
+
+	urls, err := storage.Store.GetAllData(authCtx)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

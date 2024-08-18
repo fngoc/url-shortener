@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -62,8 +64,9 @@ func GetUserID(tokenString string) int {
 }
 
 // AuthMiddleware — middleware для аунтификации HTTP-запросов.
-func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
+func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var authCtx context.Context = nil
 		_, err := r.Cookie("token")
 
 		if errors.Is(err, http.ErrNoCookie) {
@@ -80,9 +83,14 @@ func AuthMiddleware(h http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
+			authCtx = context.WithValue(r.Context(), "userID", strconv.Itoa(GetUserID(token)))
 			w.Header().Set("Authorization", token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
-		h.ServeHTTP(w, r)
+		if authCtx != nil {
+			next.ServeHTTP(w, r.WithContext(authCtx))
+		} else {
+			next.ServeHTTP(w, r)
+		}
 	}
 }
