@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/jackc/pgerrcode"
@@ -60,8 +59,6 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	result := make([]models.ResponseDto, 0)
-
 	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener")
 	if err != nil {
 		return nil, err
@@ -70,19 +67,15 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 		return nil, rows.Err()
 	}
 
+	var result []models.ResponseDto
 	for rows.Next() {
-		var shortURL string
-		var originalURL string
+		item := models.ResponseDto{}
 
-		err := rows.Scan(&shortURL, &originalURL)
-		if err != nil {
+		if err := rows.Scan(&item.ShortURL, &item.OriginalURL); err != nil {
 			return nil, err
 		}
 
-		result = append(result, models.ResponseDto{
-			ShortURL:    config.Flags.BaseResultAddress + "/" + shortURL,
-			OriginalURL: originalURL,
-		})
+		result = append(result, item)
 	}
 	return result, nil
 }
