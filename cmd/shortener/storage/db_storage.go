@@ -60,7 +60,7 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	userID := ctx.Value("userID").(int64)
+	userID := ctx.Value("userID").(int)
 	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener WHERE user_id = $1", userID)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (dbs DBStore) SaveData(ctx context.Context, id string, value string) error 
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	userId := ctx.Value("userID").(int64)
+	userId := ctx.Value("userID").(int)
 	_, err := dbs.db.ExecContext(dbCtx, "INSERT INTO url_shortener(short_url, original_url, user_id) VALUES ($1, $2, $3)", id, value, userId)
 	if err != nil {
 		var pgErr *pgconn.PgError
