@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -52,7 +51,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authCtx := context.WithValue(r.Context(), "userID", strconv.Itoa(GetUserID(authHeader)))
+	authCtx := context.WithValue(r.Context(), "userID", GetUserID(authHeader))
 
 	urls, err := storage.Store.GetAllData(authCtx)
 	if err != nil {

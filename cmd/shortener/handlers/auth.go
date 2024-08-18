@@ -8,7 +8,6 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -83,7 +82,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				HttpOnly: true,
 				Secure:   true,
 			})
-			authCtx = context.WithValue(r.Context(), "userID", strconv.Itoa(GetUserID(token)))
+			authCtx = context.WithValue(r.Context(), "userID", GetUserID(token))
 			w.Header().Set("Authorization", token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
