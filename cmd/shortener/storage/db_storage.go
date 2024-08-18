@@ -61,7 +61,7 @@ func (dbs DBStore) GetAllData(ctx context.Context) ([]models.ResponseDto, error)
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	userID := ctx.Value("userID").(int)
+	userID := ctx.Value(constants.UserIDKey).(int)
 	rows, err := dbs.db.QueryContext(dbCtx, "SELECT short_url, original_url FROM url_shortener WHERE user_id = $1", userID)
 	if err != nil {
 		return nil, err
