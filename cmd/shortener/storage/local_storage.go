@@ -37,6 +37,11 @@ func (lc LocalStore) GetAllData(_ context.Context) ([]models.ResponseDto, error)
 	return result, nil
 }
 
+func (lc LocalStore) DeleteData(ctx context.Context, strings []string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (lc LocalStore) SaveData(_ context.Context, key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("key or value is empty")

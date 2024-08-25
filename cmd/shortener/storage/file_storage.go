@@ -90,6 +90,11 @@ func (fs FileStore) SaveData(_ context.Context, key string, value string) error 
 	return nil
 }
 
+func (fs FileStore) DeleteData(ctx context.Context, strings []string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 func isCreate(filename string) (bool, error) {
 	file, err := os.Open(filename)
 	if err != nil {

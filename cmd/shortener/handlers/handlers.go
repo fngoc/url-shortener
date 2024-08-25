@@ -31,6 +31,11 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	url, err := storage.Store.GetData(r.Context(), id)
 	if err != nil {
+		var deleteErr *storage.DeleteError
+		if errors.Is(err, deleteErr) {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -74,6 +79,45 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
+func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	logger.Log.Info("auth: " + authHeader)
+	if GetUserID(authHeader) == -1 {
+		logger.Log.Warn("Token is not valid")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	dec := json.NewDecoder(r.Body)
+	var req []string
+	if err := dec.Decode(&req); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if len(req) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
+
+	err := storage.Store.DeleteData(authCtx, req)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса

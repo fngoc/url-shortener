@@ -28,6 +28,14 @@ func (p *DBError) Error() string {
 	return p.Err.Message
 }
 
+type DeleteError struct {
+	Message string
+}
+
+func (d *DeleteError) Error() string {
+	return d.Message
+}
+
 var postgresInstant DBStore
 
 func InitializeDB(dbConf string) error {
@@ -49,11 +57,21 @@ func (dbs DBStore) GetData(ctx context.Context, key string) (string, error) {
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url FROM url_shortener WHERE short_url = $1", key)
+	row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url, is_deleted FROM url_shortener WHERE short_url = $1", key)
 	var originalURL string
-	if err := row.Scan(&originalURL); err != nil {
+	var deleteFlag bool
+
+	err := row.Scan(&originalURL, &deleteFlag)
+	if err != nil {
 		return "", err
 	}
+
+	if deleteFlag {
+		return "", &DeleteError{
+			Message: "shortener is already deleted",
+		}
+	}
+
 	return originalURL, nil
 }
 
@@ -123,6 +141,49 @@ func CustomPing() bool {
 	return err == nil
 }
 
+func (dbs DBStore) DeleteData(ctx context.Context, strings []string) error {
+	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	userID := ctx.Value(constants.UserIDKey).(int)
+	var inputCh = make(chan string, len(strings))
+	var deleteErr error = nil
+
+	go func() {
+		defer close(inputCh)
+
+		for _, id := range strings {
+			row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url, user_id FROM url_shortener WHERE short_url = $1", id)
+			var originalURL string
+			var dbUserID int
+
+			if err := row.Scan(&originalURL, &userID); err != nil {
+				deleteErr = err
+				break
+			}
+			if dbUserID != userID {
+				deleteErr = errors.New("shortener is not owned by this user")
+				break
+			}
+			inputCh <- id
+		}
+	}()
+
+	if deleteErr != nil {
+		return deleteErr
+	}
+
+	go func() {
+		for id := range inputCh {
+			_, err := dbs.db.ExecContext(dbCtx, "UPDATE url_shortener SET is_delete = true WHERE user_id = $1 AND short_url = $2", userID, id)
+			if err != nil {
+				deleteErr = err
+			}
+		}
+	}()
+	return deleteErr
+}
+
 func createTables(db *sql.DB) error {
 	createTableQuery := `
 	CREATE TABLE IF NOT EXISTS url_shortener (
@@ -130,6 +191,7 @@ func createTables(db *sql.DB) error {
 		short_url VARCHAR NOT NULL UNIQUE,
 		original_url VARCHAR NOT NULL UNIQUE,
 		user_id BIGSERIAL NOT NULL,
+		is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 

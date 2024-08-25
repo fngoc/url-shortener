@@ -24,9 +24,11 @@ func Run() error {
 				r.Post("/", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.PostShortenWebhook))))
 				r.Post("/batch", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.PostShortenBatchWebhook))))
 			})
-
 			r.Route("/user", func(r chi.Router) {
-				r.Get("/urls", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetUrlsWebhook)))
+				r.Route("/urls", func(r chi.Router) {
+					r.Get("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetUrlsWebhook)))
+					r.Delete("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.DeleteUrlsWebhook)))
+				})
 			})
 		})
 	})
