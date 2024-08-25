@@ -146,41 +146,40 @@ func (dbs DBStore) DeleteData(ctx context.Context, strings []string) error {
 	defer cancel()
 
 	userID := ctx.Value(constants.UserIDKey).(int)
-	var inputCh = make(chan string, len(strings))
-	var deleteErr error = nil
+	var inputCh = make(chan string)
+	var deleteErr error
 
-	go func() {
+	go func(err *error, userID int) {
 		defer close(inputCh)
 
 		for _, id := range strings {
-			row := dbs.db.QueryRowContext(dbCtx, "SELECT original_url, user_id FROM url_shortener WHERE short_url = $1", id)
-			var originalURL string
+			row := dbs.db.QueryRowContext(dbCtx, "SELECT user_id FROM url_shortener WHERE short_url = $1", id)
 			var dbUserID int
 
-			if err := row.Scan(&originalURL, &userID); err != nil {
+			if err := row.Scan(&dbUserID); err != nil {
 				deleteErr = err
 				break
 			}
 			if dbUserID != userID {
+				fmt.Printf("DB userID %d", dbUserID)
 				deleteErr = errors.New("shortener is not owned by this user")
 				break
 			}
 			inputCh <- id
 		}
-	}()
+	}(&deleteErr, userID)
 
 	if deleteErr != nil {
 		return deleteErr
 	}
 
-	go func() {
-		for id := range inputCh {
-			_, err := dbs.db.ExecContext(dbCtx, "UPDATE url_shortener SET is_delete = true WHERE user_id = $1 AND short_url = $2", userID, id)
-			if err != nil {
-				deleteErr = err
-			}
+	for id := range inputCh {
+		_, err := dbs.db.ExecContext(dbCtx, "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = $2", userID, id)
+		if err != nil {
+			deleteErr = err
+			break
 		}
-	}()
+	}
 	return deleteErr
 }
 

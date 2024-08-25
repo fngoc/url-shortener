@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
@@ -109,6 +110,7 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
+	fmt.Println(GetUserID(authHeader))
 
 	err := storage.Store.DeleteData(authCtx, req)
 	if err != nil {
