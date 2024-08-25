@@ -104,11 +104,6 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
 	authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
 	fmt.Println(GetUserID(authHeader))
 

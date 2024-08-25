@@ -161,7 +161,6 @@ func (dbs DBStore) DeleteData(ctx context.Context, strings []string) error {
 				break
 			}
 			if dbUserID != userID {
-				fmt.Printf("DB userID %d", dbUserID)
 				deleteErr = errors.New("shortener is not owned by this user")
 				break
 			}
