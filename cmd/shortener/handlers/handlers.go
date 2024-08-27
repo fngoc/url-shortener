@@ -100,7 +100,6 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	var req []string
 	if err := dec.Decode(&req); err != nil {
-		fmt.Printf("ERROR IS = %s\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -110,7 +109,6 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 
 	err := storage.Store.DeleteData(authCtx, req)
 	if err != nil {
-		fmt.Printf("ERROR IS = %s\n", err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
