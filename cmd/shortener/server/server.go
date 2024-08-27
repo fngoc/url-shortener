@@ -15,14 +15,14 @@ func Run() error {
 	r := chi.NewRouter()
 
 	r.Route("/", func(r chi.Router) {
-		r.Post("/", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostSaveWebhook)))
-		r.Get("/{id}", logger.RequestLogger(handlers.GzipMiddleware(handlers.GetRedirectWebhook)))
-		r.Get("/ping", logger.RequestLogger(handlers.GzipMiddleware(handlers.CheckConnection)))
+		r.Post("/", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.PostSaveWebhook))))
+		r.Get("/{id}", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.GetRedirectWebhook))))
+		r.Get("/ping", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.CheckConnection))))
 
 		r.Route("/api", func(r chi.Router) {
 			r.Route("/shorten", func(r chi.Router) {
 				r.Post("/", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.PostShortenWebhook))))
-				r.Post("/batch", logger.RequestLogger(handlers.GzipMiddleware(handlers.PostShortenBatchWebhook)))
+				r.Post("/batch", logger.RequestLogger(handlers.AuthMiddleware(handlers.GzipMiddleware(handlers.PostShortenBatchWebhook))))
 			})
 			r.Route("/user", func(r chi.Router) {
 				r.Route("/urls", func(r chi.Router) {
