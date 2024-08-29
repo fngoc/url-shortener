@@ -81,7 +81,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				Path:     "/",
 				MaxAge:   3600,
 				HttpOnly: true,
-				Secure:   true,
+				Secure:   false,
 			})
 			authCtx = context.WithValue(r.Context(), constants.UserIDKey, GetUserID(token))
 			w.Header().Set("Authorization", token)
