@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"strings"
 	"sync"
 	"time"
 )
@@ -155,51 +156,69 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	//}
 
 	batchSize := 15
+	maxConcurrency := 5 // Ограничение на количество одновременно запущенных горутин
+	sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(ids)/batchSize+1) // Канал для обработки ошибок
+	errChan := make(chan error, 1) // Канал для обработки первой ошибки
 
 	for i := 0; i < len(ids); i += batchSize {
 		end := i + batchSize
 		if end > len(ids) {
 			end = len(ids)
 		}
-		// Извлекаем batch ID
 		batchIDs := ids[i:end]
 
-		// Запуск горутины для каждого батча
 		wg.Add(1)
+		sem <- struct{}{} // Блокировка если достигнуто максимальное количество горутин
 		go func(batchIDs []string) {
 			defer wg.Done()
+			defer func() { <-sem }() // Освобождаем семафор
 
-			var placeholders string
-			for i := 0; i < len(batchIDs); i++ {
-				if i < len(batchIDs)-1 {
-					placeholders += "'" + batchIDs[i] + "', "
-				} else {
-					placeholders += "'" + batchIDs[i] + "'"
+			placeholders := make([]interface{}, len(batchIDs))
+			for i, id := range batchIDs {
+				placeholders[i] = id
+			}
+
+			query := fmt.Sprintf(
+				"UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)",
+				placeholdersString(len(batchIDs)),
+			)
+
+			_, err := dbs.db.ExecContext(ctx, query, placeholders...)
+			if err != nil {
+				select {
+				case errChan <- err:
+				default:
 				}
 			}
-
-			query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
-			_, err := dbs.db.ExecContext(ctx, query)
-			if err != nil {
-				errChan <- err // Отправляем ошибку в канал
-			}
 		}(batchIDs)
-	}
 
-	// Ожидание завершения всех горутин
-	wg.Wait()
-	close(errChan)
-
-	// Проверка на ошибки
-	for err := range errChan {
-		if err != nil {
+		select {
+		case err := <-errChan:
 			return err
+		default:
 		}
 	}
 
-	return nil
+	wg.Wait()
+	close(sem)
+	close(errChan)
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
+	}
+}
+
+// Формирует строку плейсхолдеров для IN запроса ($1, $2, $3 и т.д.)
+func placeholdersString(n int) string {
+	placeholders := make([]string, n)
+	for i := 0; i < n; i++ {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	return strings.Join(placeholders, ", ")
 }
 
 func createTables(db *sql.DB) error {
