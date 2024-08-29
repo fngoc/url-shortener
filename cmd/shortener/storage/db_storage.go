@@ -155,9 +155,9 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	//	}
 	//}
 
-	batchSize := 15
-	maxConcurrency := 5 // Ограничение на количество одновременно запущенных горутин
-	sem := make(chan struct{}, maxConcurrency)
+	batchSize := 30
+	//maxConcurrency := 5 // Ограничение на количество одновременно запущенных горутин
+	//sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1) // Канал для обработки первой ошибки
 
@@ -169,10 +169,10 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		batchIDs := ids[i:end]
 
 		wg.Add(1)
-		sem <- struct{}{} // Блокировка если достигнуто максимальное количество горутин
+		//sem <- struct{}{} // Блокировка если достигнуто максимальное количество горутин
 		go func(batchIDs []string) {
 			defer wg.Done()
-			defer func() { <-sem }() // Освобождаем семафор
+			//defer func() { <-sem }() // Освобождаем семафор
 
 			placeholders := make([]interface{}, len(batchIDs))
 			for i, id := range batchIDs {
@@ -201,7 +201,7 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	}
 
 	wg.Wait()
-	close(sem)
+	//close(sem)
 	close(errChan)
 
 	select {
