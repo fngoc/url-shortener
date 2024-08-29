@@ -145,7 +145,7 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	userID := ctx.Value(constants.UserIDKey).(int)
+	//userID := ctx.Value(constants.UserIDKey).(int)
 
 	var placeholders string
 	for i := 0; i < len(ids); i++ {
@@ -156,7 +156,7 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		}
 	}
 
-	query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE user_id = %d AND short_url IN (%s)", userID, placeholders)
+	query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
 
 	_, err := dbs.db.ExecContext(dbCtx, query)
 	if err != nil {

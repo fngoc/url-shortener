@@ -88,13 +88,14 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authHeader := r.Header.Get("Authorization")
-	logger.Log.Info("auth: " + authHeader)
-	if GetUserID(authHeader) == -1 {
-		logger.Log.Warn("Token is not valid")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
+	//authHeader := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjQ5NjMxMDcsIlVzZXJJRCI6NDM5MTMyMTI1ODEzMjk5OTE4MX0.0XpTm1ABjsbrydMJRfkwnor36DuSAzFsxBTzGIv91EQ"
+	//authHeader := r.Header.Get("Authorization")
+	//logger.Log.Info("auth: " + authHeader)
+	//if GetUserID(authHeader) == -1 {
+	//	logger.Log.Warn("Token is not valid")
+	//	w.WriteHeader(http.StatusUnauthorized)
+	//	return
+	//}
 
 	dec := json.NewDecoder(r.Body)
 	var req []string
@@ -103,8 +104,8 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
-	err := storage.Store.DeleteData(authCtx, req)
+	//authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
+	err := storage.Store.DeleteData(r.Context(), req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
