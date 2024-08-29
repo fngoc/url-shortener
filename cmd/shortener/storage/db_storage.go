@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"sync"
 	"time"
 )
 
@@ -154,6 +155,9 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	//}
 
 	batchSize := 15
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(ids)/batchSize+1) // Канал для обработки ошибок
+
 	for i := 0; i < len(ids); i += batchSize {
 		end := i + batchSize
 		if end > len(ids) {
@@ -162,19 +166,36 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		// Извлекаем batch ID
 		batchIDs := ids[i:end]
 
-		var placeholders string
-		for i := 0; i < len(batchIDs); i++ {
-			if i < len(batchIDs)-1 {
-				placeholders += "'" + ids[i] + "', "
-			} else {
-				placeholders += "'" + ids[i] + "'"
-			}
-		}
+		// Запуск горутины для каждого батча
+		wg.Add(1)
+		go func(batchIDs []string) {
+			defer wg.Done()
 
-		query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
-		_, err := dbs.db.ExecContext(ctx, query)
+			var placeholders string
+			for i := 0; i < len(batchIDs); i++ {
+				if i < len(batchIDs)-1 {
+					placeholders += "'" + batchIDs[i] + "', "
+				} else {
+					placeholders += "'" + batchIDs[i] + "'"
+				}
+			}
+
+			query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
+			_, err := dbs.db.ExecContext(ctx, query)
+			if err != nil {
+				errChan <- err // Отправляем ошибку в канал
+			}
+		}(batchIDs)
+	}
+
+	// Ожидание завершения всех горутин
+	wg.Wait()
+	close(errChan)
+
+	// Проверка на ошибки
+	for err := range errChan {
 		if err != nil {
-			logger.Log.Error(err.Error())
+			return err
 		}
 	}
 
