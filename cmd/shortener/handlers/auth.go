@@ -69,7 +69,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		var authCtx context.Context = nil
 		_, err := r.Cookie("token")
 
-		if errors.Is(err, http.ErrNoCookie) {
+		if r.Header.Get("Authorization") == "" && errors.Is(err, http.ErrNoCookie) {
 			token, err := BuildJWTString()
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -87,6 +87,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Authorization", token)
 			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
 		}
+
 		if authCtx != nil {
 			next.ServeHTTP(w, r.WithContext(authCtx))
 		} else {
