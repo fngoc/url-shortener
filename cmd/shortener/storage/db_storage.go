@@ -142,25 +142,40 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
 	//userID := ctx.Value(constants.UserIDKey).(int)
 
-	var placeholders string
-	for i := 0; i < len(ids); i++ {
-		if i < len(ids)-1 {
-			placeholders += "'" + ids[i] + "', "
-		} else {
-			placeholders += "'" + ids[i] + "'"
+	//var placeholders string
+	//for i := 0; i < len(ids); i++ {
+	//	if i < len(ids)-1 {
+	//		placeholders += "'" + ids[i] + "', "
+	//	} else {
+	//		placeholders += "'" + ids[i] + "'"
+	//	}
+	//}
+
+	batchSize := 15
+	for i := 0; i < len(ids); i += batchSize {
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
 		}
-	}
+		// Извлекаем batch ID
+		batchIDs := ids[i:end]
 
-	query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
+		var placeholders string
+		for i := 0; i < len(batchIDs); i++ {
+			if i < len(batchIDs)-1 {
+				placeholders += "'" + ids[i] + "', "
+			} else {
+				placeholders += "'" + ids[i] + "'"
+			}
+		}
 
-	_, err := dbs.db.ExecContext(dbCtx, query)
-	if err != nil {
-		return err
+		query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)", placeholders)
+		_, err := dbs.db.ExecContext(ctx, query)
+		if err != nil {
+			logger.Log.Error(err.Error())
+		}
 	}
 
 	return nil
