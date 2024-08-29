@@ -141,45 +141,29 @@ func CustomPing() bool {
 	return err == nil
 }
 
-func (dbs DBStore) DeleteData(ctx context.Context, strings []string) error {
+func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 	dbCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	userID := ctx.Value(constants.UserIDKey).(int)
-	var inputCh = make(chan string)
-	var deleteErr error
 
-	go func(err *error, userID int) {
-		defer close(inputCh)
-
-		for _, id := range strings {
-			row := dbs.db.QueryRowContext(dbCtx, "SELECT user_id FROM url_shortener WHERE short_url = $1", id)
-			var dbUserID int
-
-			if err := row.Scan(&dbUserID); err != nil {
-				deleteErr = err
-				break
-			}
-			if dbUserID != userID {
-				deleteErr = errors.New("shortener is not owned by this user")
-				break
-			}
-			inputCh <- id
-		}
-	}(&deleteErr, userID)
-
-	if deleteErr != nil {
-		return deleteErr
-	}
-
-	for id := range inputCh {
-		_, err := dbs.db.ExecContext(dbCtx, "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = $2", userID, id)
-		if err != nil {
-			deleteErr = err
-			break
+	var placeholders string
+	for i := 0; i < len(ids); i++ {
+		if i < len(ids)-1 {
+			placeholders += "'" + ids[i] + "', "
+		} else {
+			placeholders += "'" + ids[i] + "'"
 		}
 	}
-	return deleteErr
+
+	query := fmt.Sprintf("UPDATE url_shortener SET is_deleted = true WHERE user_id = %d AND short_url IN (%s)", userID, placeholders)
+
+	_, err := dbs.db.ExecContext(dbCtx, query)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func createTables(db *sql.DB) error {
