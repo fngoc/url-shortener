@@ -167,9 +167,7 @@ func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) er
 			defer wg.Done()
 
 			placeholders := make([]string, len(batchIDs))
-			for i, id := range batchIDs {
-				placeholders[i] = id
-			}
+			copy(placeholders, batchIDs)
 
 			query := "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = ANY($2::text[])"
 			_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(placeholders))
