@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lib/pq"
+	"golang.org/x/sync/semaphore"
 	"strings"
 	"sync"
 	"time"
@@ -145,13 +146,15 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	batchSize := 1000 // Увеличиваем размер батча для уменьшения числа запросов
-	var wg sync.WaitGroup
+	batchSize := 1000
+	maxGoroutines := 10 // Ограничение на количество одновременно работающих горутин
+	sem := semaphore.NewWeighted(int64(maxGoroutines))
 	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Создание единого набора ID для всех запросов
+	var wg sync.WaitGroup
+
 	for i := 0; i < len(ids); i += batchSize {
 		end := i + batchSize
 		if end > len(ids) {
@@ -159,41 +162,24 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		}
 		batchIDs := ids[i:end]
 
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return err
+		}
+
 		wg.Add(1)
 		go func(batchIDs []string) {
 			defer wg.Done()
+			defer sem.Release(1)
 
 			placeholders := make([]interface{}, len(batchIDs))
 			for i, id := range batchIDs {
 				placeholders[i] = id
 			}
 
-			// Открытие транзакции
-			tx, err := dbs.db.BeginTx(ctx, nil)
-			if err != nil {
-				select {
-				case errChan <- err:
-					cancel()
-				default:
-				}
-				return
-			}
-
-			// Выполнение запроса в рамках транзакции
 			query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])"
-			_, err = tx.ExecContext(ctx, query, pq.Array(placeholders))
-			if err != nil {
-				tx.Rollback()
-				select {
-				case errChan <- err:
-					cancel()
-				default:
-				}
-				return
-			}
 
-			// Фиксация транзакции
-			if err := tx.Commit(); err != nil {
+			_, err := dbs.db.ExecContext(ctx, query, pq.Array(placeholders))
+			if err != nil {
 				select {
 				case errChan <- err:
 					cancel()
