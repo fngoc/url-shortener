@@ -34,7 +34,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	url, err := storage.Store.GetData(r.Context(), id)
 	if err != nil {
 		var deleteErr *storage.DeleteError
-		if errors.Is(err, deleteErr) {
+		if errors.As(err, &deleteErr) {
 			w.WriteHeader(http.StatusGone)
 			return
 		}
