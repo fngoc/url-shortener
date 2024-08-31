@@ -13,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lib/pq"
+	"golang.org/x/sync/semaphore"
+	"sync"
 	"time"
 )
 
@@ -143,87 +145,76 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	//if len(ids) == 0 {
-	//	return nil
-	//}
+	if len(ids) == 0 {
+		return nil
+	}
 
-	//const (
-	//	batchSize     = 10 // Размер батча
-	//	maxGoroutines = 10 // Максимальное количество одновременно работающих горутин
-	//)
+	const (
+		batchSize     = 25 // Размер батча
+		maxGoroutines = 10 // Максимальное количество одновременно работающих горутин
+	)
 
-	//sem := semaphore.NewWeighted(int64(maxGoroutines))
-	//errChan := make(chan error, 1)
+	sem := semaphore.NewWeighted(int64(maxGoroutines))
+	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
-	//for i := 0; i < len(ids); i += batchSize {
-	//	end := i + batchSize
-	//	if end > len(ids) {
-	//		end = len(ids)
-	//	}
-	//	batchIDs := ids[i:end]
+	for i := 0; i < len(ids); i += batchSize {
+		end := i + batchSize
+		if end > len(ids) {
+			end = len(ids)
+		}
+		batchIDs := ids[i:end]
 
-	// Ожидание доступности слота для новой горутины
-	//if err := sem.Acquire(ctx, 1); err != nil {
-	//	return err
-	//}
+		// Ожидание доступности слота для новой горутины
+		if err := sem.Acquire(ctx, 1); err != nil {
+			return err
+		}
 
-	//wg.Add(1)
-	//go func(batchIDs []string) {
-	//	defer wg.Done()
-	//	defer sem.Release(1)
+		wg.Add(1)
+		go func(batchIDs []string) {
+			defer wg.Done()
+			defer sem.Release(1)
 
-	//placeholders := make([]interface{}, len(batchIDs))
-	//for i, id := range batchIDs {
-	//	placeholders[i] = id
-	//}
+			placeholders := make([]interface{}, len(batchIDs))
+			for i, id := range batchIDs {
+				placeholders[i] = id
+			}
 
-	// Используем DELETE для окончательного удаления записей
-	query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])"
+			// Используем DELETE для окончательного удаления записей
+			query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])"
 
-	_, err := dbs.db.ExecContext(ctx, query, pq.Array(ids))
-	if err != nil {
-		//select {
-		//case errChan <- fmt.Errorf("ошибка при удалении батча: %w", err):
-		//	cancel() // Отмена контекста для остановки выполнения
-		//default:
-		//}
-		return err
+			_, err := dbs.db.ExecContext(ctx, query, pq.Array(placeholders))
+			if err != nil {
+				select {
+				case errChan <- fmt.Errorf("ошибка при удалении батча: %w", err):
+					cancel() // Отмена контекста для остановки выполнения
+				default:
+				}
+			}
+		}(batchIDs)
+
+		// Проверка на ошибки после завершения работы горутин
+		select {
+		case err := <-errChan:
+			wg.Wait() // Дожидаемся завершения всех горутин
+			return err
+		default:
+		}
 	}
-	//}(batchIDs)
 
-	// Проверка на ошибки после завершения работы горутин
-	//select {
-	//case err := <-errChan:
-	//	wg.Wait() // Дожидаемся завершения всех горутин
-	//	return err
-	//default:
-	//}
-	//}
-	//
-	//wg.Wait()
-	//close(errChan)
-	//
-	//select {
-	//case err := <-errChan:
-	//	return err
-	//default:
-	//	return nil
-	//}
-	return nil
+	wg.Wait()
+	close(errChan)
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
+	}
 }
-
-// Формирует строку плейсхолдеров для IN запроса ($1, $2, $3 и т.д.)
-//func placeholdersString(n int) string {
-//	placeholders := make([]string, n)
-//	for i := 0; i < n; i++ {
-//		placeholders[i] = fmt.Sprintf("$%d", i+1)
-//	}
-//	return strings.Join(placeholders, ", ")
-//}
 
 func createTables(db *sql.DB) error {
 	createTableQuery := `
