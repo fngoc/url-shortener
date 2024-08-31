@@ -145,12 +145,13 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	batchSize := 30
+	batchSize := 1000 // Увеличиваем размер батча для уменьшения числа запросов
 	var wg sync.WaitGroup
 	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// Создание единого набора ID для всех запросов
 	for i := 0; i < len(ids); i += batchSize {
 		end := i + batchSize
 		if end > len(ids) {
@@ -167,15 +168,35 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 				placeholders[i] = id
 			}
 
-			query := fmt.Sprintf(
-				"UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])",
-			)
-
-			_, err := dbs.db.ExecContext(ctx, query, pq.Array(placeholders))
+			// Открытие транзакции
+			tx, err := dbs.db.BeginTx(ctx, nil)
 			if err != nil {
 				select {
 				case errChan <- err:
-					cancel() // Отмена контекста при первой ошибке
+					cancel()
+				default:
+				}
+				return
+			}
+
+			// Выполнение запроса в рамках транзакции
+			query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])"
+			_, err = tx.ExecContext(ctx, query, pq.Array(placeholders))
+			if err != nil {
+				tx.Rollback()
+				select {
+				case errChan <- err:
+					cancel()
+				default:
+				}
+				return
+			}
+
+			// Фиксация транзакции
+			if err := tx.Commit(); err != nil {
+				select {
+				case errChan <- err:
+					cancel()
 				default:
 				}
 			}
