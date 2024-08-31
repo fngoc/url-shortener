@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -88,50 +87,27 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(constants.UserIDKey).(int)
+	var requestBody []string
+	rawBody, err := io.ReadAll(r.Body)
 
-	var IDs []string
-
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&IDs); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	numWorkers := 3
-	numJobs := len(IDs)
-
-	jobs := make(chan job, numJobs)
-	defer close(jobs)
-
-	for w := 0; w < numWorkers; w++ {
-		go worker(jobs)
+	if err := json.Unmarshal(rawBody, &requestBody); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	for j := 0; j < numJobs; j++ {
-		item := job{
-			userID: strconv.Itoa(userID),
-			urlID:  IDs[j],
-		}
-		jobs <- item
+	if len(requestBody) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
+
+	storage.Store.DeleteData(userID, requestBody)
 
 	w.WriteHeader(http.StatusAccepted)
-}
-
-func worker(jobs <-chan job) {
-	for j := range jobs {
-		err := storage.Store.DeleteData(j.userID, j.urlID)
-		if err != nil {
-			return
-		}
-	}
-}
-
-type job struct {
-	userID string
-	urlID  string
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса

@@ -90,7 +90,7 @@ func (fs FileStore) SaveData(_ context.Context, key string, value string) error 
 	return nil
 }
 
-func (fs FileStore) DeleteData(userID string, url string) error {
+func (fs FileStore) DeleteData(userID int, url []string) error {
 	//TODO implement me
 	panic("implement me")
 }

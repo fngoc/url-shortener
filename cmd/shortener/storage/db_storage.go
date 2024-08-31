@@ -141,12 +141,7 @@ func CustomPing() bool {
 	return err == nil
 }
 
-func (dbs DBStore) DeleteData(userID string, url string) error {
-	//urlID, err := strconv.Atoi(url)
-	//if err != nil {
-	//	return err
-	//}
-
+func (dbs DBStore) DeleteData(userID int, url []string) error {
 	query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ($1) AND user_id = ($2);"
 	_, err := dbs.db.Exec(query, url, userID)
 	if err != nil {
