@@ -231,6 +231,10 @@ func createTables(db *sql.DB) error {
 	defer cancel()
 
 	_, err := db.ExecContext(ctx, createTableQuery)
+	_, errIdx := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS short_url_idx ON url_shortener (short_url)`)
+	if errIdx != nil {
+		return err
+	}
 	if err != nil {
 		return err
 	}
