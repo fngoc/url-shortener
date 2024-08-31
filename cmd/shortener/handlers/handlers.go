@@ -50,11 +50,14 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authHeader := r.Header.Get("Authorization")
-	if GetUserID(authHeader) == -1 {
-		logger.Log.Warn("Token is not valid")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+	cookie, _ := r.Cookie("token")
+	if cookie == nil {
+		authHeader := r.Header.Get("Authorization")
+		if GetUserID(authHeader) == -1 {
+			logger.Log.Warn("Token in 'Authorization' header is not valid")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
 	userID := r.Context().Value(constants.UserIDKey).(int)
