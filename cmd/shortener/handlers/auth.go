@@ -17,9 +17,10 @@ type Claims struct {
 	UserID int
 }
 
+const CookieName = "token"
+
+const secretKey = "super-secret-key"
 const tokenExp = time.Hour * 3
-const secretKey = "supersecretkey"
-const cookieName = "supersecretkey"
 
 // BuildJWTString создаёт токен и возвращает его в виде строки.
 func BuildJWTString() (string, error) {
@@ -67,7 +68,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var tokenString string
 
-		cookie, err := r.Cookie(cookieName)
+		cookie, err := r.Cookie(CookieName)
 
 		if err != nil {
 			tokenString, err = BuildJWTString()
@@ -78,7 +79,7 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 
 			http.SetCookie(w, &http.Cookie{
-				Name:  cookieName,
+				Name:  CookieName,
 				Value: tokenString,
 			})
 		} else {

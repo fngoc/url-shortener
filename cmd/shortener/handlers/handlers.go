@@ -49,7 +49,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, _ := r.Cookie("token")
+	cookie, _ := r.Cookie(CookieName)
 	if cookie == nil {
 		authHeader := r.Header.Get("Authorization")
 		if GetUserID(authHeader) == -1 {
