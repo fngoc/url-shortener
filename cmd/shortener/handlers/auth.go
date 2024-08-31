@@ -17,8 +17,9 @@ type Claims struct {
 	UserID int
 }
 
-const TokenExp = time.Hour * 3
-const SecretKey = "supersecretkey"
+const tokenExp = time.Hour * 3
+const secretKey = "supersecretkey"
+const cookieName = "supersecretkey"
 
 // BuildJWTString создаёт токен и возвращает его в виде строки.
 func BuildJWTString() (string, error) {
@@ -26,14 +27,14 @@ func BuildJWTString() (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			// когда создан токен
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(TokenExp)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenExp)),
 		},
 		// собственное утверждение
 		UserID: rand.Int(),
 	})
 
 	// создаём строку токена
-	tokenString, err := token.SignedString([]byte(SecretKey))
+	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
 		return "", err
 	}
@@ -49,7 +50,7 @@ func GetUserID(tokenString string) int {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
-			return []byte(SecretKey), nil
+			return []byte(secretKey), nil
 		})
 	if err != nil {
 		return -1
@@ -64,66 +65,34 @@ func GetUserID(tokenString string) int {
 // AuthMiddleware — middleware для аунтификации HTTP-запросов.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authHandler(w, r, next)
-	}
-	//return func(w http.ResponseWriter, r *http.Request) {
-	//	var authCtx context.Context = nil
-	//	_, err := r.Cookie("token")
-	//
-	//	if errors.Is(err, http.ErrNoCookie) {
-	//		token, err := BuildJWTString()
-	//		if err != nil {
-	//			w.WriteHeader(http.StatusInternalServerError)
-	//			return
-	//		}
-	//		http.SetCookie(w, &http.Cookie{
-	//			Name:     "token",
-	//			Value:    token,
-	//			Path:     "/",
-	//			MaxAge:   3600,
-	//			HttpOnly: true,
-	//			Secure:   true,
-	//		})
-	//		authCtx = context.WithValue(r.Context(), constants.UserIDKey, GetUserID(token))
-	//		w.Header().Set("Authorization", token)
-	//		logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
-	//	}
-	//	if authCtx != nil {
-	//		next.ServeHTTP(w, r.WithContext(authCtx))
-	//	} else {
-	//		next.ServeHTTP(w, r)
-	//	}
-	//}
-}
+		var tokenString string
 
-func authHandler(w http.ResponseWriter, r *http.Request, handler http.Handler) {
-	var tokenString string
-
-	cookie, err := r.Cookie("token")
-
-	if err != nil {
-		tokenString, err = BuildJWTString()
+		cookie, err := r.Cookie(cookieName)
 
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			tokenString, err = BuildJWTString()
+
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:  cookieName,
+				Value: tokenString,
+			})
+		} else {
+			tokenString = cookie.Value
+		}
+
+		userID := GetUserID(tokenString)
+
+		if userID == -1 {
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:  "token",
-			Value: tokenString,
-		})
-	} else {
-		tokenString = cookie.Value
+		ctx := context.WithValue(r.Context(), constants.UserIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
-
-	userID := GetUserID(tokenString)
-
-	if userID == -1 {
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	ctx := context.WithValue(r.Context(), constants.UserIDKey, userID)
-	handler.ServeHTTP(w, r.WithContext(ctx))
 }

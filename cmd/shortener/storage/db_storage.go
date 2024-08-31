@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/lib/pq"
-	"golang.org/x/sync/semaphore"
 	"sync"
 	"time"
 )
@@ -144,19 +143,14 @@ func CustomPing() bool {
 	return err == nil
 }
 
-func (dbs DBStore) DeleteData(ctx context.Context, userID int, url []string) error {
+func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) error {
 	if len(url) == 0 {
 		return nil
 	}
 
-	const (
-		batchSize     = 20 // Размер батча
-		maxGoroutines = 10 // Максимальное количество одновременно работающих горутин
-	)
-
-	sem := semaphore.NewWeighted(int64(maxGoroutines))
+	batchSize := 10
 	errChan := make(chan error, 1)
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithTimeout(rCtx, 5*time.Second)
 	defer cancel()
 
 	var wg sync.WaitGroup
@@ -168,29 +162,22 @@ func (dbs DBStore) DeleteData(ctx context.Context, userID int, url []string) err
 		}
 		batchIDs := url[i:end]
 
-		// Ожидание доступности слота для новой горутины
-		if err := sem.Acquire(ctx, 1); err != nil {
-			return err
-		}
-
 		wg.Add(1)
 		go func(batchIDs []string) {
 			defer wg.Done()
-			defer sem.Release(1)
 
 			placeholders := make([]interface{}, len(batchIDs))
 			for i, id := range batchIDs {
 				placeholders[i] = id
 			}
 
-			// Используем DELETE для окончательного удаления записей
 			query := "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = ANY($2::text[])"
 
 			_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(placeholders))
 			if err != nil {
 				select {
-				case errChan <- fmt.Errorf("ошибка при удалении батча: %w", err):
-					cancel() // Отмена контекста для остановки выполнения
+				case errChan <- fmt.Errorf("delete batch error: %v", err):
+					cancel()
 				default:
 				}
 			}
@@ -199,7 +186,7 @@ func (dbs DBStore) DeleteData(ctx context.Context, userID int, url []string) err
 		// Проверка на ошибки после завершения работы горутин
 		select {
 		case err := <-errChan:
-			wg.Wait() // Дожидаемся завершения всех горутин
+			wg.Wait()
 			return err
 		default:
 		}
@@ -226,16 +213,17 @@ func createTables(db *sql.DB) error {
 		is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
+	createIndexQuery := `CREATE UNIQUE INDEX IF NOT EXISTS short_url_idx ON url_shortener (short_url)`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	_, err := db.ExecContext(ctx, createTableQuery)
-	_, errIdx := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS short_url_idx ON url_shortener (short_url)`)
-	if errIdx != nil {
+	if err != nil {
 		return err
 	}
-	if err != nil {
+	_, errIdx := db.ExecContext(ctx, createIndexQuery)
+	if errIdx != nil {
 		return err
 	}
 	logger.Log.Info("Database table created")

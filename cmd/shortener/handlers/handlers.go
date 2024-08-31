@@ -25,10 +25,8 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := strings.TrimPrefix(r.URL.Path, "/")
-	logger.Log.Info("I AM HERE 1" + id)
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		logger.Log.Info("I AM HERE 2" + id)
 		return
 	}
 	url, err := storage.Store.GetData(r.Context(), id)
@@ -38,7 +36,6 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusGone)
 			return
 		}
-		logger.Log.Info("I AM HERE 3" + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -90,26 +87,31 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(constants.UserIDKey).(int)
-	var requestBody []string
+	var urls []string
+
 	rawBody, err := io.ReadAll(r.Body)
-
 	if err != nil {
+		logger.Log.Warn(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if err := json.Unmarshal(rawBody, &requestBody); err != nil {
+	if err := json.Unmarshal(rawBody, &urls); err != nil {
+		logger.Log.Warn(err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if len(requestBody) == 0 {
+	if len(urls) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	storage.Store.DeleteData(r.Context(), userID, requestBody)
-
+	if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
+		logger.Log.Warn(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	w.WriteHeader(http.StatusAccepted)
 }
 
