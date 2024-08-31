@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/constants"
-	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
 	"net/http"
@@ -66,31 +64,66 @@ func GetUserID(tokenString string) int {
 // AuthMiddleware — middleware для аунтификации HTTP-запросов.
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var authCtx context.Context = nil
-		_, err := r.Cookie("token")
-
-		if errors.Is(err, http.ErrNoCookie) {
-			token, err := BuildJWTString()
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			http.SetCookie(w, &http.Cookie{
-				Name:     "token",
-				Value:    token,
-				Path:     "/",
-				MaxAge:   3600,
-				HttpOnly: true,
-				Secure:   true,
-			})
-			authCtx = context.WithValue(r.Context(), constants.UserIDKey, GetUserID(token))
-			w.Header().Set("Authorization", token)
-			logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
-		}
-		if authCtx != nil {
-			next.ServeHTTP(w, r.WithContext(authCtx))
-		} else {
-			next.ServeHTTP(w, r)
-		}
+		authHandler(w, r, next)
 	}
+	//return func(w http.ResponseWriter, r *http.Request) {
+	//	var authCtx context.Context = nil
+	//	_, err := r.Cookie("token")
+	//
+	//	if errors.Is(err, http.ErrNoCookie) {
+	//		token, err := BuildJWTString()
+	//		if err != nil {
+	//			w.WriteHeader(http.StatusInternalServerError)
+	//			return
+	//		}
+	//		http.SetCookie(w, &http.Cookie{
+	//			Name:     "token",
+	//			Value:    token,
+	//			Path:     "/",
+	//			MaxAge:   3600,
+	//			HttpOnly: true,
+	//			Secure:   true,
+	//		})
+	//		authCtx = context.WithValue(r.Context(), constants.UserIDKey, GetUserID(token))
+	//		w.Header().Set("Authorization", token)
+	//		logger.Log.Info(fmt.Sprintf("Create new cookie with token: %s for %s", token, r.URL.Path))
+	//	}
+	//	if authCtx != nil {
+	//		next.ServeHTTP(w, r.WithContext(authCtx))
+	//	} else {
+	//		next.ServeHTTP(w, r)
+	//	}
+	//}
+}
+
+func authHandler(w http.ResponseWriter, r *http.Request, handler http.Handler) {
+	var tokenString string
+
+	cookie, err := r.Cookie("token")
+
+	if err != nil {
+		tokenString, err = BuildJWTString()
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:  "token",
+			Value: tokenString,
+		})
+	} else {
+		tokenString = cookie.Value
+	}
+
+	userID := GetUserID(tokenString)
+
+	if userID == -1 {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	ctx := context.WithValue(r.Context(), constants.UserIDKey, userID)
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }

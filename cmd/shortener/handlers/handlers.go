@@ -84,18 +84,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
-	//authHeader := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjUxMTAxNDYsIlVzZXJJRCI6NzI0NTY1NDIwMzk2MjgwOTY4N30.-aZEx39gc78vZ1gsy7uKlJYTUybVWOyxYMEVpU3hG3Q\n"
-	authHeader := r.Header.Get("Authorization")
-	logger.Log.Info("auth: " + authHeader)
-	if GetUserID(authHeader) == -1 {
-		logger.Log.Warn("Token is not valid")
-		w.WriteHeader(http.StatusUnauthorized)
-		return
-	}
-
-	userID := GetUserID(authHeader)
-
-	//authCtx := context.WithValue(r.Context(), constants.UserIDKey, userID)
+	userID := r.Context().Value(constants.UserIDKey).(int)
 
 	var IDs []string
 
