@@ -146,8 +146,15 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	batchSize := 1000
-	maxGoroutines := 10 // Ограничение на количество одновременно работающих горутин
+	if len(ids) == 0 {
+		return nil
+	}
+
+	const (
+		batchSize     = 10 // Размер батча
+		maxGoroutines = 10 // Максимальное количество одновременно работающих горутин
+	)
+
 	sem := semaphore.NewWeighted(int64(maxGoroutines))
 	errChan := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
@@ -162,6 +169,7 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		}
 		batchIDs := ids[i:end]
 
+		// Ожидание доступности слота для новой горутины
 		if err := sem.Acquire(ctx, 1); err != nil {
 			return err
 		}
@@ -176,18 +184,20 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 				placeholders[i] = id
 			}
 
+			// Используем DELETE для окончательного удаления записей
 			query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])"
 
 			_, err := dbs.db.ExecContext(ctx, query, pq.Array(placeholders))
 			if err != nil {
 				select {
-				case errChan <- err:
-					cancel()
+				case errChan <- fmt.Errorf("ошибка при удалении батча: %w", err):
+					cancel() // Отмена контекста для остановки выполнения
 				default:
 				}
 			}
 		}(batchIDs)
 
+		// Проверка на ошибки после завершения работы горутин
 		select {
 		case err := <-errChan:
 			wg.Wait() // Дожидаемся завершения всех горутин
