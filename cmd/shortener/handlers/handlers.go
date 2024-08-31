@@ -103,6 +103,7 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(urls) == 0 {
+		logger.Log.Warn("No urls found in request body")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
