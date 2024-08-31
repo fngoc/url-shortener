@@ -91,8 +91,7 @@ func (fs FileStore) SaveData(_ context.Context, key string, value string) error 
 }
 
 func (fs FileStore) DeleteData(cxt context.Context, userID int, url []string) error {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Errorf("not implemented yet")
 }
 
 func isCreate(filename string) (bool, error) {

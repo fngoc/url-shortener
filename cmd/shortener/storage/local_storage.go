@@ -38,8 +38,7 @@ func (lc LocalStore) GetAllData(_ context.Context) ([]models.ResponseDto, error)
 }
 
 func (lc LocalStore) DeleteData(cxt context.Context, userID int, url []string) error {
-	//TODO implement me
-	panic("implement me")
+	return fmt.Errorf("not implemented yet")
 }
 
 func (lc LocalStore) SaveData(_ context.Context, key string, value string) error {
