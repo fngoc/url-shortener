@@ -37,7 +37,7 @@ func (lc LocalStore) GetAllData(_ context.Context) ([]models.ResponseDto, error)
 	return result, nil
 }
 
-func (lc LocalStore) DeleteData(ctx context.Context, strings []string) error {
+func (lc LocalStore) DeleteData(userID string, url string) error {
 	//TODO implement me
 	panic("implement me")
 }

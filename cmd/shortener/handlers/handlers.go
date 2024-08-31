@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -83,36 +84,62 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		w.WriteHeader(http.StatusBadRequest)
+	//authHeader := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjUxMTAxNDYsIlVzZXJJRCI6NzI0NTY1NDIwMzk2MjgwOTY4N30.-aZEx39gc78vZ1gsy7uKlJYTUybVWOyxYMEVpU3hG3Q\n"
+	authHeader := r.Header.Get("Authorization")
+	logger.Log.Info("auth: " + authHeader)
+	if GetUserID(authHeader) == -1 {
+		logger.Log.Warn("Token is not valid")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	//authHeader := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjQ5NjMxMDcsIlVzZXJJRCI6NDM5MTMyMTI1ODEzMjk5OTE4MX0.0XpTm1ABjsbrydMJRfkwnor36DuSAzFsxBTzGIv91EQ"
-	//authHeader := r.Header.Get("Authorization")
-	//logger.Log.Info("auth: " + authHeader)
-	//if GetUserID(authHeader) == -1 {
-	//	logger.Log.Warn("Token is not valid")
-	//	w.WriteHeader(http.StatusUnauthorized)
-	//	return
-	//}
+	userID := GetUserID(authHeader)
+
+	//authCtx := context.WithValue(r.Context(), constants.UserIDKey, userID)
+
+	var IDs []string
 
 	dec := json.NewDecoder(r.Body)
-	var req []string
-	if err := dec.Decode(&req); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&IDs); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	//authCtx := context.WithValue(r.Context(), constants.UserIDKey, GetUserID(authHeader))
-	err := storage.Store.DeleteData(r.Context(), req)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	numWorkers := 3
+	numJobs := len(IDs)
+
+	jobs := make(chan job, numJobs)
+	defer close(jobs)
+
+	for w := 0; w < numWorkers; w++ {
+		go worker(jobs)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	for j := 0; j < numJobs; j++ {
+		item := job{
+			userID: strconv.Itoa(userID),
+			urlID:  IDs[j],
+		}
+		jobs <- item
+	}
+
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func worker(jobs <-chan job) {
+	for j := range jobs {
+		err := storage.Store.DeleteData(j.userID, j.urlID)
+		if err != nil {
+			return
+		}
+	}
+}
+
+type job struct {
+	userID string
+	urlID  string
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
