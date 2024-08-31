@@ -25,8 +25,10 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := strings.TrimPrefix(r.URL.Path, "/")
+	logger.Log.Info("I AM HERE 1" + id)
 	if id == "" {
 		w.WriteHeader(http.StatusBadRequest)
+		logger.Log.Info("I AM HERE 2" + id)
 		return
 	}
 	url, err := storage.Store.GetData(r.Context(), id)
@@ -36,6 +38,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusGone)
 			return
 		}
+		logger.Log.Info("I AM HERE 3" + err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
