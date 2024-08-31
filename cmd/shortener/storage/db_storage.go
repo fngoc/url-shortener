@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/lib/pq"
 	"strings"
 	"sync"
 	"time"
@@ -144,22 +145,11 @@ func CustomPing() bool {
 }
 
 func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
-	//userID := ctx.Value(constants.UserIDKey).(int)
-
-	//var placeholders string
-	//for i := 0; i < len(ids); i++ {
-	//	if i < len(ids)-1 {
-	//		placeholders += "'" + ids[i] + "', "
-	//	} else {
-	//		placeholders += "'" + ids[i] + "'"
-	//	}
-	//}
-
 	batchSize := 30
-	//maxConcurrency := 5 // Ограничение на количество одновременно запущенных горутин
-	//sem := make(chan struct{}, maxConcurrency)
 	var wg sync.WaitGroup
-	errChan := make(chan error, 1) // Канал для обработки первой ошибки
+	errChan := make(chan error, 1)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	for i := 0; i < len(ids); i += batchSize {
 		end := i + batchSize
@@ -169,10 +159,8 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 		batchIDs := ids[i:end]
 
 		wg.Add(1)
-		//sem <- struct{}{} // Блокировка если достигнуто максимальное количество горутин
 		go func(batchIDs []string) {
 			defer wg.Done()
-			//defer func() { <-sem }() // Освобождаем семафор
 
 			placeholders := make([]interface{}, len(batchIDs))
 			for i, id := range batchIDs {
@@ -180,14 +168,14 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 			}
 
 			query := fmt.Sprintf(
-				"UPDATE url_shortener SET is_deleted = true WHERE short_url IN (%s)",
-				placeholdersString(len(batchIDs)),
+				"UPDATE url_shortener SET is_deleted = true WHERE short_url = ANY($1::text[])",
 			)
 
-			_, err := dbs.db.ExecContext(ctx, query, placeholders...)
+			_, err := dbs.db.ExecContext(ctx, query, pq.Array(placeholders))
 			if err != nil {
 				select {
 				case errChan <- err:
+					cancel() // Отмена контекста при первой ошибке
 				default:
 				}
 			}
@@ -195,13 +183,13 @@ func (dbs DBStore) DeleteData(ctx context.Context, ids []string) error {
 
 		select {
 		case err := <-errChan:
+			wg.Wait() // Дожидаемся завершения всех горутин
 			return err
 		default:
 		}
 	}
 
 	wg.Wait()
-	//close(sem)
 	close(errChan)
 
 	select {
