@@ -105,7 +105,7 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storage.Store.DeleteData(userID, requestBody)
+	storage.Store.DeleteData(r.Context(), userID, requestBody)
 
 	w.WriteHeader(http.StatusAccepted)
 }
