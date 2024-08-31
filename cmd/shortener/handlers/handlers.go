@@ -8,6 +8,7 @@ import (
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
+	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
@@ -49,13 +50,12 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//authHeader := r.Header.Get("Authorization")
-	//logger.Log.Info("auth: " + authHeader)
-	//if GetUserID(authHeader) == -1 {
-	//	logger.Log.Warn("Token is not valid")
-	//	w.WriteHeader(http.StatusUnauthorized)
-	//	return
-	//}
+	authHeader := r.Header.Get("Authorization")
+	if GetUserID(authHeader) == -1 {
+		logger.Log.Warn("Token is not valid")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	userID := r.Context().Value(constants.UserIDKey).(int)
 	authCtx := context.WithValue(r.Context(), constants.UserIDKey, userID)
