@@ -87,33 +87,47 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(constants.UserIDKey).(int)
-	var urls []string
 
-	rawBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		logger.Log.Warn(err.Error())
-		w.WriteHeader(http.StatusBadRequest)
+	var IDs []string
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&IDs); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := json.Unmarshal(rawBody, &urls); err != nil {
-		logger.Log.Warn(err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	numWorkers := 3
+	numJobs := len(IDs)
+
+	jobs := make(chan job, numJobs)
+	defer close(jobs)
+
+	for w := 0; w < numWorkers; w++ {
+		go worker(jobs)
 	}
 
-	if len(urls) == 0 {
-		logger.Log.Warn("No urls found in request body")
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	for j := 0; j < numJobs; j++ {
+		item := job{
+			userID: userID,
+			urlID:  IDs[j],
+		}
+		jobs <- item
 	}
 
-	if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
-		logger.Log.Warn(err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func worker(jobs <-chan job) {
+	for j := range jobs {
+		storage.Store.DeleteData(j.userID, j.urlID)
+	}
+}
+
+type job struct {
+	userID int
+	urlID  string
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса

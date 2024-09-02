@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/lib/pq"
-	"sync"
 	"time"
 )
 
@@ -143,50 +141,56 @@ func CustomPing() bool {
 	return err == nil
 }
 
-func (dbs DBStore) DeleteData(rCtx context.Context, userID int, urls []string) error {
-	if len(urls) == 0 {
-		return nil
-	}
-
-	batchSize := 10
-	errChan := make(chan error, 1)
-	ctx, cancel := context.WithTimeout(rCtx, 5*time.Second)
-	defer cancel()
-
-	var wg sync.WaitGroup
-
-	for i := 0; i < len(urls); i += batchSize {
-		end := i + batchSize
-		if end > len(urls) {
-			end = len(urls)
-		}
-		batchIDs := urls[i:end]
-
-		wg.Add(1)
-		go func(batchIDs []string) {
-			defer wg.Done()
-
-			query := "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = ANY($2::text[])"
-			_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(batchIDs))
-			if err != nil {
-				select {
-				case errChan <- fmt.Errorf("delete batch error: %v", err):
-					cancel()
-				default:
-				}
-			}
-		}(batchIDs)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	select {
-	case err := <-errChan:
+func (dbs DBStore) DeleteData(userID int, url string) error {
+	query := "UPDATE url_shortener SET is_deleted = true WHERE short_url = ($1) AND user_id = ($2);"
+	_, err := dbs.db.Exec(query, url, userID)
+	if err != nil {
 		return err
-	default:
-		return nil
 	}
+	return nil
+	//if len(urls) == 0 {
+	//	return nil
+	//}
+	//
+	//batchSize := 10
+	//errChan := make(chan error, 1)
+	//ctx, cancel := context.WithTimeout(rCtx, 5*time.Second)
+	//defer cancel()
+	//
+	//var wg sync.WaitGroup
+	//
+	//for i := 0; i < len(urls); i += batchSize {
+	//	end := i + batchSize
+	//	if end > len(urls) {
+	//		end = len(urls)
+	//	}
+	//	batchIDs := urls[i:end]
+	//
+	//	wg.Add(1)
+	//	go func(batchIDs []string) {
+	//		defer wg.Done()
+	//
+	//		query := "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = ANY($2::text[])"
+	//		_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(batchIDs))
+	//		if err != nil {
+	//			select {
+	//			case errChan <- fmt.Errorf("delete batch error: %v", err):
+	//				cancel()
+	//			default:
+	//			}
+	//		}
+	//	}(batchIDs)
+	//}
+	//
+	//wg.Wait()
+	//close(errChan)
+	//
+	//select {
+	//case err := <-errChan:
+	//	return err
+	//default:
+	//	return nil
+	//}
 }
 
 func createTables(db *sql.DB) error {

@@ -37,7 +37,7 @@ func (lc LocalStore) GetAllData(_ context.Context) ([]models.ResponseDto, error)
 	return result, nil
 }
 
-func (lc LocalStore) DeleteData(cxt context.Context, userID int, url []string) error {
+func (lc LocalStore) DeleteData(userID int, url string) error {
 	return fmt.Errorf("not implemented yet")
 }
 
