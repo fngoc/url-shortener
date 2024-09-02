@@ -108,11 +108,11 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
-			logger.Log.Warn(err.Error())
-		}
-	}()
+	if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
+		logger.Log.Warn(err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	w.WriteHeader(http.StatusAccepted)
 }
 

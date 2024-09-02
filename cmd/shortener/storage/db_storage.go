@@ -178,18 +178,15 @@ func (dbs DBStore) DeleteData(rCtx context.Context, userID int, urls []string) e
 		}(batchIDs)
 	}
 
-	go func() {
-		wg.Wait()
-		close(errChan)
+	wg.Wait()
+	close(errChan)
 
-		select {
-		case err := <-errChan:
-			logger.Log.Warn(err.Error())
-		default:
-		}
-	}()
-
-	return nil
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
+	}
 }
 
 func createTables(db *sql.DB) error {
