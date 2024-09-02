@@ -30,11 +30,11 @@ func (p *DBError) Error() string {
 	return p.Err.Message
 }
 
-type DeleteError struct {
+type DBDeleteError struct {
 	Message string
 }
 
-func (d *DeleteError) Error() string {
+func (d *DBDeleteError) Error() string {
 	return d.Message
 }
 
@@ -69,7 +69,7 @@ func (dbs DBStore) GetData(ctx context.Context, key string) (string, error) {
 	}
 
 	if deleteFlag {
-		return "", &DeleteError{
+		return "", &DBDeleteError{
 			Message: "shortener is already deleted",
 		}
 	}
@@ -166,11 +166,8 @@ func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) er
 		go func(batchIDs []string) {
 			defer wg.Done()
 
-			placeholders := make([]string, len(batchIDs))
-			copy(placeholders, batchIDs)
-
 			query := "UPDATE url_shortener SET is_deleted = true WHERE user_id = $1 AND short_url = ANY($2::text[])"
-			_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(placeholders))
+			_, err := dbs.db.ExecContext(ctx, query, userID, pq.Array(batchIDs))
 			if err != nil {
 				select {
 				case errChan <- fmt.Errorf("delete batch error: %v", err):

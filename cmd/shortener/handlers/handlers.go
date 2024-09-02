@@ -31,7 +31,7 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	url, err := storage.Store.GetData(r.Context(), id)
 	if err != nil {
-		var deleteErr *storage.DeleteError
+		var deleteErr *storage.DBDeleteError
 		if errors.As(err, &deleteErr) {
 			w.WriteHeader(http.StatusGone)
 			return
@@ -52,7 +52,7 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie(CookieName)
 	if cookie == nil {
 		authHeader := r.Header.Get("Authorization")
-		if GetUserID(authHeader) == -1 {
+		if _, err := GetUserID(authHeader); err != nil {
 			logger.Log.Warn("Token in 'Authorization' header is not valid")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -108,11 +108,12 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
-		logger.Log.Warn(err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
+	go func() {
+		if err := storage.Store.DeleteData(r.Context(), userID, urls); err != nil {
+			logger.Log.Warn(err.Error())
+		}
+	}()
+
 	w.WriteHeader(http.StatusAccepted)
 }
 

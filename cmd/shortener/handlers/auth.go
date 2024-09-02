@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fngoc/url-shortener/cmd/shortener/constants"
+	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/golang-jwt/jwt/v4"
 	"math/rand"
 	"net/http"
@@ -44,7 +45,7 @@ func BuildJWTString() (string, error) {
 	return tokenString, nil
 }
 
-func GetUserID(tokenString string) int {
+func GetUserID(tokenString string) (int, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (interface{}, error) {
@@ -54,13 +55,13 @@ func GetUserID(tokenString string) int {
 			return []byte(secretKey), nil
 		})
 	if err != nil {
-		return -1
+		return -1, err
 	}
 
 	if !token.Valid {
-		return -1
+		return -1, fmt.Errorf("invalid token")
 	}
-	return claims.UserID
+	return claims.UserID, nil
 }
 
 // AuthMiddleware — middleware для аунтификации HTTP-запросов.
@@ -86,10 +87,11 @@ func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			tokenString = cookie.Value
 		}
 
-		userID := GetUserID(tokenString)
+		userID, err := GetUserID(tokenString)
 
-		if userID == -1 {
+		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
+			logger.Log.Warn(err.Error())
 			return
 		}
 
