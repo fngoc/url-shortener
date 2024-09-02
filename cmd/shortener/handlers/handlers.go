@@ -17,6 +17,11 @@ import (
 	"strings"
 )
 
+type deleteJob struct {
+	userID int
+	url    string
+}
+
 // GetRedirectWebhook функция обработчик GET HTTP-запроса
 func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -87,7 +92,6 @@ func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 // DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
 func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(constants.UserIDKey).(int)
-
 	var IDs []string
 
 	dec := json.NewDecoder(r.Body)
@@ -101,17 +105,17 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	numWorkers := 3
 	numJobs := len(IDs)
 
-	jobs := make(chan job, numJobs)
+	jobs := make(chan deleteJob, numJobs)
 	defer close(jobs)
 
 	for w := 0; w < numWorkers; w++ {
-		go worker(jobs)
+		go deleteWorker(jobs)
 	}
 
 	for j := 0; j < numJobs; j++ {
-		item := job{
+		item := deleteJob{
 			userID: userID,
-			urlID:  IDs[j],
+			url:    IDs[j],
 		}
 		jobs <- item
 	}
@@ -119,15 +123,10 @@ func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func worker(jobs <-chan job) {
+func deleteWorker(jobs <-chan deleteJob) {
 	for j := range jobs {
-		storage.Store.DeleteData(j.userID, j.urlID)
+		storage.Store.DeleteData(j.userID, j.url)
 	}
-}
-
-type job struct {
-	userID int
-	urlID  string
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса
