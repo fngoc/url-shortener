@@ -143,8 +143,8 @@ func CustomPing() bool {
 	return err == nil
 }
 
-func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) error {
-	if len(url) == 0 {
+func (dbs DBStore) DeleteData(rCtx context.Context, userID int, urls []string) error {
+	if len(urls) == 0 {
 		return nil
 	}
 
@@ -155,12 +155,12 @@ func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) er
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < len(url); i += batchSize {
+	for i := 0; i < len(urls); i += batchSize {
 		end := i + batchSize
-		if end > len(url) {
-			end = len(url)
+		if end > len(urls) {
+			end = len(urls)
 		}
-		batchIDs := url[i:end]
+		batchIDs := urls[i:end]
 
 		wg.Add(1)
 		go func(batchIDs []string) {
@@ -178,15 +178,18 @@ func (dbs DBStore) DeleteData(rCtx context.Context, userID int, url []string) er
 		}(batchIDs)
 	}
 
-	wg.Wait()
-	close(errChan)
+	go func() {
+		wg.Wait()
+		close(errChan)
 
-	select {
-	case err := <-errChan:
-		return err
-	default:
-		return nil
-	}
+		select {
+		case err := <-errChan:
+			logger.Log.Warn(err.Error())
+		default:
+		}
+	}()
+
+	return nil
 }
 
 func createTables(db *sql.DB) error {
