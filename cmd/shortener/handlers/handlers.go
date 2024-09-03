@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/fngoc/url-shortener/cmd/shortener/config"
+	"github.com/fngoc/url-shortener/cmd/shortener/constants"
 	"github.com/fngoc/url-shortener/cmd/shortener/storage"
+	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"github.com/fngoc/url-shortener/internal/utils"
 	"github.com/jackc/pgerrcode"
@@ -13,6 +16,11 @@ import (
 	"net/http"
 	"strings"
 )
+
+type deleteJob struct {
+	userID int
+	url    string
+}
 
 // GetRedirectWebhook функция обработчик GET HTTP-запроса
 func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
@@ -28,10 +36,97 @@ func GetRedirectWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	url, err := storage.Store.GetData(r.Context(), id)
 	if err != nil {
+		var deleteErr *storage.DBDeleteError
+		if errors.As(err, &deleteErr) {
+			w.WriteHeader(http.StatusGone)
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+// GetUrlsWebhook функция обработчик GET HTTP-запроса для получения всех urls
+func GetUrlsWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	cookie, _ := r.Cookie(CookieName)
+	if cookie == nil {
+		authHeader := r.Header.Get("Authorization")
+		if _, err := GetUserID(authHeader); err != nil {
+			logger.Log.Warn("Token in 'Authorization' header is not valid")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+	}
+
+	userID := r.Context().Value(constants.UserIDKey).(int)
+	authCtx := context.WithValue(r.Context(), constants.UserIDKey, userID)
+
+	urls, err := storage.Store.GetAllData(authCtx)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(urls) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	buf := bytes.Buffer{}
+	encode := json.NewEncoder(&buf)
+	if err := encode.Encode(urls); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(buf.Bytes())
+}
+
+// DeleteUrlsWebhook функция обработчик DELETE HTTP-запроса для удаления urls
+func DeleteUrlsWebhook(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(constants.UserIDKey).(int)
+	var IDs []string
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&IDs); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	numWorkers := 3
+	numJobs := len(IDs)
+
+	jobs := make(chan deleteJob, numJobs)
+	defer close(jobs)
+
+	for w := 0; w < numWorkers; w++ {
+		go deleteWorker(jobs)
+	}
+
+	for j := 0; j < numJobs; j++ {
+		item := deleteJob{
+			userID: userID,
+			url:    IDs[j],
+		}
+		jobs <- item
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+}
+
+func deleteWorker(jobs <-chan deleteJob) {
+	for j := range jobs {
+		storage.Store.DeleteData(j.userID, j.url)
+	}
 }
 
 // PostSaveWebhook функция обработчик POST HTTP-запроса

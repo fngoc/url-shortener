@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fngoc/url-shortener/cmd/shortener/config"
 	"github.com/fngoc/url-shortener/internal/logger"
 	"github.com/fngoc/url-shortener/internal/models"
 	"os"
@@ -61,6 +62,17 @@ func (fs FileStore) GetData(_ context.Context, key string) (string, error) {
 	return "", fmt.Errorf("data by key: %s, not found", key)
 }
 
+func (fs FileStore) GetAllData(_ context.Context) ([]models.ResponseDto, error) {
+	result := make([]models.ResponseDto, 0, len(fs))
+	for key, val := range fs {
+		result = append(result, models.ResponseDto{
+			ShortURL:    config.Flags.BaseResultAddress + "/" + key,
+			OriginalURL: val,
+		})
+	}
+	return result, nil
+}
+
 func (fs FileStore) SaveData(_ context.Context, key string, value string) error {
 	if key == "" || value == "" {
 		return fmt.Errorf("key or value is empty")
@@ -76,6 +88,10 @@ func (fs FileStore) SaveData(_ context.Context, key string, value string) error 
 	}
 
 	return nil
+}
+
+func (fs FileStore) DeleteData(userID int, url string) error {
+	return fmt.Errorf("not implemented yet")
 }
 
 func isCreate(filename string) (bool, error) {
